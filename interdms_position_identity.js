@@ -11,7 +11,7 @@ const {TrialHandler, MultiStairHandler} = data;
 const {Scheduler} = util;
 
 // ---- Experiment metadata ----
-let expName = 'interdms_position_identity_trials';
+let expName = 'interdms_position_identity';
 let expInfo = {
     workerId: '',           // <— NEW: user will type Worker ID here
     mturkLink: ''            // <— NEW: user will paste MTurk worker page URL here
