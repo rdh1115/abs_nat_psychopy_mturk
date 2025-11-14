@@ -3,7 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Dict, Tuple, Optional, Sequence, Union, List
+from typing import Dict, Tuple, Optional, Sequence, Union
 
 import cv2
 import h5py
@@ -13,6 +13,7 @@ import torch
 from torchvision.transforms import v2
 
 from task.base import HvMTaskDataset
+from utils.helper import _subpath_after
 
 
 def make_read_fn(img_size=224, dataset_stats=None, transform=None):
@@ -116,7 +117,7 @@ class HvMTaskCache:
 
 class HvMMetaData:
     """
-    build df and images for all stimuli in the stim_dir
+    build behaviour_df and images for all stimuli in the stim_dir
     shared across datasets
     """
 
@@ -206,7 +207,7 @@ class HvMMetaData:
         """
         Build mappings from string category and obj labels to integer IDs.
         Each obj_id is unique *within* its category (i.e., 0, 1, 2,... per category).
-        Adds new columns `category_id` and `obj_id` to self.df.
+        Adds new columns `category_id` and `obj_id` to self.behaviour_df.
         """
         # Map categories to IDs
         unique_categories = sorted(self.df['category'].unique())
@@ -230,7 +231,7 @@ class HvMMetaData:
 
     def filter_files(self):
         """
-        Filters self.df in-place to only include rows where files exist.
+        Filters self.behaviour_df in-place to only include rows where files exist.
         """
         if self.df is None:
             self.load_metadata()
@@ -243,7 +244,7 @@ class HvMMetaData:
 
         # Filter
         no_local_files = self.df[~self.df['file_exists']]
-        print(f'removed {len(no_local_files)} rows from the original df')
+        print(f'removed {len(no_local_files)} rows from the original behaviour_df')
         self.df = self.df[self.df['file_exists']].reset_index(drop=True)
         print(f'found {len(self.df)} local images after filtering')
         self.filtered = True
@@ -351,7 +352,7 @@ class HvMImageLoader:
         """
         Automatically create train and val loaders.
         - Looks for train.csv and val.csv in stim_dir.
-        - If missing, splits metadata.df and saves CSVs.
+        - If missing, splits metadata.behaviour_df and saves CSVs.
         """
         if root_dir is None:
             current_file = Path(__file__).resolve()
@@ -476,7 +477,7 @@ class HvMImageLoader:
         task_df = task_df.loc[task_df['var'].isin(filter_vars)]
 
         if not {"category_id", "obj_id", "ty", "tz"}.issubset(task_df.columns):
-            raise ValueError("df must already have category_id, obj_id, ty, tz columns.")
+            raise ValueError("behaviour_df must already have category_id, obj_id, ty, tz columns.")
 
         category_size = 8
         identity_size = 8
@@ -773,15 +774,6 @@ def localize_h5_filename(h5_fp, val):
     local_base = h5_fp.parent.parent / 'HvM_with_discfade'
     local_fp = local_base / Path(*Path(val).parts[5:])
     return local_fp
-
-
-def _subpath_after(p: Path, segment: str) -> Optional[Path]:
-    """Return the subpath (as Path) after `segment`"""
-    try:
-        idx = p.parts.index(segment)
-    except ValueError:
-        return None
-    return Path(*p.parts[idx + 1:])
 
 
 def localize_csv_filename(
