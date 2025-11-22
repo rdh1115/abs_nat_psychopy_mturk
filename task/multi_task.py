@@ -1,11 +1,11 @@
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, IterableDataset, get_worker_info, default_collate
+from torch.utils.data import IterableDataset, get_worker_info, default_collate
 
 from task.base import HvMTaskDataset
 from task.dms import DMSDataset, CtxDMSDataset, InterDMSDataset
 from task.nback import NBackDataset
-from utils.stim_io import HvMImageLoader, HvMImageMapper
+from utils.stim_io import HvMImageMapper
 
 TASK_NAME_TASK_INDEX = {
     '1back_position': 1,
