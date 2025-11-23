@@ -10,6 +10,7 @@
 </head>
 <body>
 <div id="root"></div>
+
 <!-- external libraries -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jquery-ui-dist@1.12.1/jquery-ui.min.js"></script>
@@ -33,7 +34,12 @@
 </script>
 
 <!-- experiment -->
-<script src="1back_category.js" type="module"></script>
+<script type="module">
+    import {runTask} from './task_engine.js';
+    import {TASK_CONFIG} from './task_config/1back.js';
+
+    runTask(TASK_CONFIG);
+</script>
 <!-- legacy browsers -->
 <script src="./lib/psychojs-2025.1.1.iife.js" nomodule></script>
 </body>

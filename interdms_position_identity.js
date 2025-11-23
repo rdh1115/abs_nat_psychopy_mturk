@@ -51,16 +51,32 @@ function buildCsvFallback() {
 }
 
 // ===== Cloud upload config =====
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx43V8Aha-JTWTKj51PHQo5SkQztRsV0EYfyAsULh2-NQeFcC1Y8k6wYyhO0_5b_p2amg/exec';
+// const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx43V8Aha-JTWTKj51PHQo5SkQztRsV0EYfyAsULh2-NQeFcC1Y8k6wYyhO0_5b_p2amg/exec';
+const WEB_APP_URL_PART1 = 'https://script.google.com/macros/s/AKfycbxWmyZZ5duXZCoFYcwdJdueZuoSMft1OAkx4Hru4-';
+const WEB_APP_URL_PART2 = '9ChvAQXoVI5zsxgfixJMWcGWkmpA/exec';
+const SECURE_TOKEN = 'fdajknarofr'
 
 async function uploadCsvToSheets(csv, meta) {
-    const res = await fetch(WEB_APP_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'text/plain;charset=utf-8'}, // no preflight
-        body: JSON.stringify({csv, meta}),
+    const fullWebAppUrl = WEB_APP_URL_PART1 + WEB_APP_URL_PART2;
+    const payload = JSON.stringify({
+        csv: csv,
+        meta: meta,
+        token: SECURE_TOKEN // <-- ADDED SECURITY TOKEN HERE
     });
+
+    const res = await fetch(fullWebAppUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json;charset=utf-8'},
+        body: payload,
+    });
+
     const json = await res.json().catch(() => ({ok: false, error: 'Bad JSON response'}));
-    if (!json.ok) throw new Error(json.error || 'Sheets upload failed');
+
+    if (!json.ok) {
+        // This will catch both network errors and the 'Unauthorized token.' error from your Apps Script.
+        throw new Error(json.error || 'Sheets upload failed');
+    }
+
     return json;
 }
 
@@ -98,8 +114,8 @@ const IMG_DIR = `${ASSETS_DIR}/images`;
 const FALLBACK = `${IMG_DIR}/157_Chairs.png`;
 
 // --- Resource preload (collect from CSV + add fallback) ---
-// const TRIALS_CSV = 'resources/interdms_debug.csv';
-const TRIALS_CSV = 'resources/interdms_position_identity_trials.csv';
+const TRIALS_CSV = 'resources/interdms_debug.csv';
+// const TRIALS_CSV = 'resources/interdms_position_identity_trials.csv';
 const ALWAYS_RESOURCES = ['resources/images/157_Chairs.png']; // fallback
 
 async function collectImagePathsFromCSV(csvPath) {
@@ -205,9 +221,9 @@ const dialogCancelScheduler = new Scheduler(psychoJS);
     flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
     flowScheduler.add(trialsLoopScheduler);
     flowScheduler.add(trialsLoopEnd);
-    flowScheduler.add(ITIRoutineBegin());
-    flowScheduler.add(ITIRoutineEachFrame());
-    flowScheduler.add(ITIRoutineEnd());
+    // flowScheduler.add(ITIRoutineBegin());
+    // flowScheduler.add(ITIRoutineEachFrame());
+    // flowScheduler.add(ITIRoutineEnd());
     flowScheduler.add(ThanksRoutineBegin());
     flowScheduler.add(ThanksRoutineEachFrame());
     flowScheduler.add(ThanksRoutineEnd());
@@ -348,7 +364,6 @@ function ThanksRoutineEnd(snapshot) {
     };
 }
 
-
 async function updateInfo() {
     currentLoop = psychoJS.experiment;
     expInfo['date'] = util.MonotonicClock.getDateStr();
@@ -368,7 +383,6 @@ async function updateInfo() {
     return Scheduler.Event.NEXT;
 }
 
-
 // =========================
 var WelcomeClock;
 var welcomeText;
@@ -386,6 +400,11 @@ var actKeys;
 
 
 var learningSession;        // true for session 1 (learning)
+const LEARNING_SESSION_CODE = '0';
+var practiceEndedShown = false;
+var showLearningEndThisTrial = false;
+var trialHadResponse = false;
+
 var currentImageDur;        // per-frame image duration
 var currentTotalDur;        // per-frame total duration (image + delay/response)
 var lastFeedbackMsg = '';   // text to show in feedback routine
@@ -443,7 +462,13 @@ async function experimentInit() {
         name: 'sessText',
         text: 'Press Enter to start',
         font: 'Open Sans',
-        pos: [0, 0], draggable: false, height: 0.05,
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.04,
+        wrapWidth: 0.8,
+        draggable: false,
         languageStyle: 'LTR',
         color: new util.Color('white'),
         depth: 0.0
@@ -457,7 +482,13 @@ async function experimentInit() {
         name: 'trialText',
         text: 'Press Enter to start the trial',
         font: 'Open Sans',
-        pos: [0, 0], draggable: false, height: 0.05,
+        pos: [-0.4, 0],
+        anchor: 'center',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        draggable: false,
+        height: 0.05,
+        wrapWidth: 1.2,
         languageStyle: 'LTR',
         color: new util.Color('white'),
         depth: 0.0
@@ -479,9 +510,6 @@ async function experimentInit() {
         interpolate: true,
         depth: 0.0
     });
-
-    resp = new core.Keyboard({psychoJS, clock: new util.Clock(), waitForStart: true});
-
     // ---- Frame instructions text (top of screen) ----
     frameText = new visual.TextStim({
         win: psychoJS.window,
@@ -496,6 +524,7 @@ async function experimentInit() {
         color: new util.Color('white'),
         depth: -1.0
     });
+    resp = new core.Keyboard({psychoJS, clock: new util.Clock(), waitForStart: true});
 
     // ---- Feedback (for learning session frames 3 & 4) ----
     FeedbackClock = new util.Clock();
@@ -552,36 +581,36 @@ async function experimentInit() {
         name: 'welcomeText',
         text:
             `
-    Task instructions:
+Task instructions:
 
-    • You will perform an Inter(-leaved)DMS ABAB Position–Identity task.
+• You will perform an Inter(-leaved)DMS ABAB Position–Identity task.
 
-    • Each trial consists of a sequence of  4 images. You will make two comparisons:
+• Each trial consists of a sequence of  4 images. You will make two comparisons:
 
-      1) Location match (3rd vs 1st frame):
-         – Compare the 3rd frame with the 1st frame.
-         – If the stimulus appears in the same LOCATION, press 'X' as soon as you see the 3rd frame.
-         – Otherwise, press 'B'.
+  1) Location match (3rd vs 1st frame):
+     – Compare the 3rd frame with the 1st frame.
+     – If the stimulus appears in the same LOCATION, press 'X' as soon as you see the 3rd frame.
+     – Otherwise, press 'B'.
 
-      2) Identity match (4th vs 2nd frame):
-         – Compare the 4th frame with the 2nd frame.
-         – If the object is the same (for example, the same plane), press 'X' as soon as you see the 4th frame.
-         – Otherwise, press 'B'.
+  2) Identity match (4th vs 2nd frame):
+     – Compare the 4th frame with the 2nd frame.
+     – If the object is the same (for example, the same plane), press 'X' as soon as you see the 4th frame.
+     – Otherwise, press 'B'.
 
-    • Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
+• Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
-    • There are 5 sessions of 20 trials each. You can take short breaks between sessions.
+• There are 5 sessions of 20 trials each. You can take short breaks between sessions.
 
-    Press Enter to start.`,
+Press Enter to start.`,
         font: 'Open Sans',
 
         // ↓↓↓ layout bits ↓↓↓
-        pos: [0, 0],
-        anchor: 'center',
-        alignHoriz: 'center',
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
         alignVert: 'center',
         height: 0.028,
-        wrapWidth: 1.3,
+        wrapWidth: 0.8,
         // ↑↑↑ layout bits ↑↑↑
 
         draggable: false,
@@ -606,15 +635,20 @@ Please submit the following survey code on the MTurk page before submit: AWDR
 
 Press Enter to finish.
 
-Important: after you press Enter, do not close this page until the data file has
-finished uploading (this may take a few seconds / you might have to press Enter multiple times). Please wait until you see next page`,
+Important: after you press Enter, do not close this page until the data file has finished uploading (this may take a few seconds / you might have to press Enter multiple times). 
+
+Please wait until you see next page`,
         font: 'Open Sans',
-        pos: [0, 0], draggable: false, height: 0.05,
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.028,
+        wrapWidth: 0.8,
+        draggable: false,
         color: new util.Color('white'),
-        wrapWidth: 1.2,
         depth: 0.0
     });
-
     let FINAL_SURVEY_CODE = '';
 
     thanksKey = new core.Keyboard({psychoJS, clock: new util.Clock(), waitForStart: true});
@@ -630,13 +664,16 @@ finished uploading (this may take a few seconds / you might have to press Enter 
 From now on, the real sessions will begin.
 The task will run at normal speed, without extra
 frame-by-frame instructions or feedback.
-
+            
 Press Enter to continue to the real sessions.`,
         font: 'Open Sans',
-        pos: [0, 0],
         draggable: false,
-        height: 0.05,
-        wrapWidth: 1.2,
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.04,
+        wrapWidth: 0.8,
         languageStyle: 'LTR',
         color: new util.Color('white'),
         depth: 0.0
@@ -713,6 +750,18 @@ function GlobalsRoutineEachFrame() {
     };
 }
 
+function GlobalsRoutineEnd(snapshot) {
+    return async function () {
+        GlobalsComponents.forEach(c => {
+            if (typeof c.setAutoDraw === 'function') c.setAutoDraw(false);
+        });
+        psychoJS.experiment.addData('Globals.stopped', globalClock.getTime());
+        routineTimer.reset();
+
+        if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
+        return Scheduler.Event.NEXT;
+    };
+}
 
 /// =========================
 // LearningSessionEnd Routine
@@ -739,14 +788,22 @@ function LearningSessionEndRoutineBegin(snapshot) {
             if ('status' in c) c.status = PsychoJS.Status.NOT_STARTED;
         });
 
+        if (!showLearningEndThisTrial) {
+            continueRoutine = false;
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
         psychoJS.experiment.addData('LearningSessionEnd.started', globalClock.getTime());
-
         return Scheduler.Event.NEXT;
     };
 }
 
 function LearningSessionEndRoutineEachFrame() {
     return async function () {
+        if (!showLearningEndThisTrial || !continueRoutine) {
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
         t = LearningSessionEndClock.getTime();
         frameN += 1;
 
@@ -791,6 +848,11 @@ function LearningSessionEndRoutineEachFrame() {
 
 function LearningSessionEndRoutineEnd(snapshot) {
     return async function () {
+        if (!showLearningEndThisTrial) {
+            continueRoutine = false;
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
         LearningSessionEndComponents.forEach(c => {
             if ('setAutoDraw' in c) c.setAutoDraw(false);
         });
@@ -798,24 +860,12 @@ function LearningSessionEndRoutineEnd(snapshot) {
 
         psychoJS.experiment.addData('LearningSessionEnd.stopped', globalClock.getTime());
 
+        showLearningEndThisTrial = false;
         if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
         return Scheduler.Event.NEXT;
     };
 }
 
-
-function GlobalsRoutineEnd(snapshot) {
-    return async function () {
-        GlobalsComponents.forEach(c => {
-            if (typeof c.setAutoDraw === 'function') c.setAutoDraw(false);
-        });
-        psychoJS.experiment.addData('Globals.stopped', globalClock.getTime());
-        routineTimer.reset();
-
-        if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
-        return Scheduler.Event.NEXT;
-    };
-}
 
 // ------------- Trials (outer loop) -------------
 var trials;
@@ -826,11 +876,14 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
 
         trials = new TrialHandler({
             psychoJS,
-            nReps: 1, method: TrialHandler.Method.SEQUENTIAL,
-            extraInfo: expInfo, originPath: undefined,
-            // trialList: 'resources/interdms_debug.csv',
-            trialList: 'resources/interdms_position_identity_trials.csv',
-            seed: undefined, name: 'trials'
+            nReps: 1,
+            method: TrialHandler.Method.SEQUENTIAL,
+            extraInfo: expInfo,
+            originPath: undefined,
+            trialList: 'resources/interdms_debug.csv',
+            // trialList: 'resources/interdms_position_identity_trials.csv',
+            seed: undefined,
+            name: 'trials'
         });
         psychoJS.experiment.addLoop(trials);
         currentLoop = trials;
@@ -845,32 +898,40 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
             trialsLoopScheduler.add(SessionIntroRoutineEachFrame());
             trialsLoopScheduler.add(SessionIntroRoutineEnd(snapshot));
 
-            // NEW: show learning-session-end message ONLY once
-            trialsLoopScheduler.add(async function () {
-                if (String(prevSession) === '1' && String(session) !== '1') {
-                    // trigger the new routine
-                    return 'learning_end';
-                }
-                return Scheduler.Event.NEXT;
-            });
-
-            // Route to the learning-session-end routine
-            trialsLoopScheduler.add(LearningSessionEndRoutineBegin(snapshot), 'learning_end');
-            trialsLoopScheduler.add(LearningSessionEndRoutineEachFrame(), 'learning_end');
-            trialsLoopScheduler.add(LearningSessionEndRoutineEnd(snapshot), 'learning_end');
 
             // Next: trial intro
             trialsLoopScheduler.add(TrialIntroRoutineBegin(snapshot));
             trialsLoopScheduler.add(TrialIntroRoutineEachFrame());
             trialsLoopScheduler.add(TrialIntroRoutineEnd(snapshot));
 
-
             const framesLoopScheduler = new Scheduler(psychoJS);
             trialsLoopScheduler.add(framesLoopBegin(framesLoopScheduler, snapshot));
             trialsLoopScheduler.add(framesLoopScheduler);
             trialsLoopScheduler.add(framesLoopEnd);
-
             trialsLoopScheduler.add(trialsLoopEndIteration(trialsLoopScheduler, snapshot));
+            // check if we just left the learning session (session "0")
+            trialsLoopScheduler.add(async function () {
+                // Only trigger once, only if prevSession was the learning session and session actually changed
+                if (!practiceEndedShown &&
+                    String(prevSession) === LEARNING_SESSION_CODE
+                ) {
+                    practiceEndedShown = true;
+                    showLearningEndThisTrial = true;
+                } else {
+                    showLearningEndThisTrial = false;
+                }
+
+                return Scheduler.Event.NEXT;
+            });
+
+            // Route to the learning-session-end routine
+            trialsLoopScheduler.add(LearningSessionEndRoutineBegin(snapshot));
+            trialsLoopScheduler.add(LearningSessionEndRoutineEachFrame());
+            trialsLoopScheduler.add(LearningSessionEndRoutineEnd(snapshot));
+            trialsLoopScheduler.add(ITIRoutineBegin(snapshot));
+            trialsLoopScheduler.add(ITIRoutineEachFrame());
+            trialsLoopScheduler.add(ITIRoutineEnd(snapshot));
+
         });
 
         return Scheduler.Event.NEXT;
@@ -889,6 +950,8 @@ async function trialsLoopEnd() {
 function trialsLoopEndIteration(scheduler, snapshot) {
     return async function () {
         if (typeof snapshot !== 'undefined') {
+            prevSession = session;
+
             if (snapshot.finished) {
                 if (psychoJS.experiment.isEntryEmpty()) {
                     psychoJS.experiment.nextEntry(snapshot);
@@ -897,6 +960,7 @@ function trialsLoopEndIteration(scheduler, snapshot) {
             } else {
                 psychoJS.experiment.nextEntry(snapshot);
             }
+
             return Scheduler.Event.NEXT;
         }
     };
@@ -911,10 +975,13 @@ function framesLoopBegin(framesLoopScheduler, snapshot) {
 
         frames = new TrialHandler({
             psychoJS,
-            nReps: 4, method: TrialHandler.Method.SEQUENTIAL,
-            extraInfo: expInfo, originPath: undefined,
+            nReps: 4,
+            method: TrialHandler.Method.SEQUENTIAL,
+            extraInfo: expInfo,
+            originPath: undefined,
             trialList: undefined,
-            seed: undefined, name: 'frames'
+            seed: undefined,
+            name: 'frames'
         });
         psychoJS.experiment.addLoop(frames);
         currentLoop = frames;
@@ -1101,11 +1168,10 @@ function SessionIntroRoutineBegin(snapshot) {
 
             const sessStr = String(session);
 
-            if (sessStr === '1' || sessStr === '01') {
+            if (sessStr === LEARNING_SESSION_CODE && !practiceEndedShown) {
                 // ---- Learning session intro (Session 1) ----
                 sessText.setText(
-                    `Learning Session (Practice)
-
+                    `Learning Session (Practice)\n
 In this first session, the task will run more slowly.
 You will:
 
@@ -1212,7 +1278,6 @@ function SessionIntroRoutineEnd(snapshot) {
         }
 
         sessKey.stop();
-        prevSession = session;
 
         routineTimer.reset();
         if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
@@ -1248,16 +1313,21 @@ function TrialIntroRoutineBegin(snapshot) {
         // --- Prepare stim & expected keys for the 4 frames ---
         frameIdx = -1;
 
+        function low(s) {
+            return (((typeof s) === "string") || (s instanceof String)) ? s.toLowerCase() : s;
+        }
+
         stimPaths = [stim1, stim2, stim3, stim4];
         actKeys = [
             null,                        // frame 1 (no response)
             null,                        // frame 2 (no response)
-            normalizeAction(act3),       // expected response for frame 3
-            normalizeAction(act4),       // expected response for frame 4
+            low(act3),       // expected response for frame 3
+            low(act4),       // expected response for frame 4
         ];
 
+        trialHadResponse = false;
         // ---- Learning session? (Session 1 only) ----
-        learningSession = (String(session) === '1' || String(session) === '01');
+        learningSession = (String(session) === '0');
 
         psychoJS.experiment.addData('TrialIntro.started', globalClock.getTime());
         TrialIntroMaxDuration = null;
@@ -1270,7 +1340,6 @@ function TrialIntroRoutineBegin(snapshot) {
         return Scheduler.Event.NEXT;
     };
 }
-
 
 function TrialIntroRoutineEachFrame() {
     return async function () {
@@ -1475,12 +1544,18 @@ function FrameRoutineEachFrame() {
         }
 
         // "Wait..." during delay for learning session, frames 1 & 2 only
-        if (learningSession && (frameIdx === 0 || frameIdx === 1)) {
+        if (learningSession && frameIdx >= 0 && frameIdx <= 3) {
             // delay starts after the image offset
             if (t >= currentImageDur && waitText.status === PsychoJS.Status.NOT_STARTED) {
+                if (frameIdx === 2 || frameIdx === 3) {
+                    waitText.setText('Respond');
+                } else {
+                    waitText.setText('Wait...');
+                }
                 waitText.tStart = t;
                 waitText.frameNStart = frameN;
                 waitText.setAutoDraw(true);
+                waitText.status = PsychoJS.Status.STARTED;
             }
             // stop at end of frame
             const frameEnd = currentTotalDur - psychoJS.window.monitorFramePeriod * 0.75;
@@ -1531,6 +1606,7 @@ function FrameRoutineEachFrame() {
                     resp.rt = last.rt;
                     resp.duration = last.duration;
 
+                    trialHadResponse = true;
                     if (learningSession) {
                         const expected = actKeys[frameIdx];  // 'x' or 'b' from CSV
                         const key = resp.keys ? resp.keys.toLowerCase() : null;
@@ -1561,7 +1637,6 @@ function FrameRoutineEachFrame() {
             }
         }
 
-        // quit?
         if (psychoJS.experiment.experimentEnded ||
             psychoJS.eventManager.getKeys({keyList: ['escape']}).length > 0) {
             return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
@@ -1591,6 +1666,7 @@ function FrameRoutineEnd(snapshot) {
             if (typeof c.setAutoDraw === 'function') c.setAutoDraw(false);
         });
         waitText.setAutoDraw(false);
+        frameText.setAutoDraw(false);
 
         psychoJS.experiment.addData('Frame.stopped', globalClock.getTime());
 
@@ -1650,7 +1726,6 @@ function FrameRoutineEnd(snapshot) {
         return Scheduler.Event.NEXT;
     };
 }
-
 
 // =========================
 // Feedback (learning session, after frames 3 & 4)
@@ -1774,7 +1849,16 @@ function ITIRoutineBegin(snapshot) {
 
         // local clock for 5s countdown
         itiClock.reset();
-
+        psychoJS.experiment.addData('trialHasResponse', trialHadResponse ? 1 : 0);
+        if (!trialHadResponse) {
+            itiText.setText(
+                'We did not detect any responses in the last trial.\n' +
+                'Please press X or B on the comparison images.\n\n' +
+                'Next trial in 5s – press Enter to start now.'
+            );
+        } else {
+            itiText.setText('Next trial in 5s - press Enter to start now');
+        }
         psychoJS.experiment.addData('ITI.started', globalClock.getTime());
         ITIMaxDuration = null;
 

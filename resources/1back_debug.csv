@@ -1,0 +1,5 @@
+session,stim1,stim2,stim3,stim4,stim5,stim6,act2,act3,act4,act5,act6
+0,images/157_Chairs.png,images/188_Chairs.png,images/306_Planes.png,images/352_Cars.png,images/386_Cars.png,images/402_Animals.png,b,x,x,x,x
+1,images/157_Chairs.png,images/188_Chairs.png,images/306_Planes.png,images/352_Cars.png,images/386_Cars.png,images/402_Animals.png,b,b,b,b,b
+1,images/157_Chairs.png,images/188_Chairs.png,images/306_Planes.png,images/352_Cars.png,images/386_Cars.png,images/402_Animals.png,x,x,x,x,x
+2,images/157_Chairs.png,images/188_Chairs.png,images/306_Planes.png,images/352_Cars.png,images/386_Cars.png,images/402_Animals.png,b,b,b,b,b

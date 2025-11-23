@@ -98,7 +98,8 @@ const IMG_DIR = `${ASSETS_DIR}/images`;
 const FALLBACK = `${IMG_DIR}/157_Chairs.png`;
 
 // --- Resource preload (collect from CSV + add fallback) ---
-const TRIALS_CSV = 'resources/1back_category_trials.csv';
+const TRIALS_CSV = 'resources/1back_debug.csv';
+// const TRIALS_CSV = 'resources/1back_category_trials.csv';
 const ALWAYS_RESOURCES = ['resources/images/157_Chairs.png']; // fallback
 
 async function collectImagePathsFromCSV(csvPath) {
@@ -204,9 +205,9 @@ const dialogCancelScheduler = new Scheduler(psychoJS);
     flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
     flowScheduler.add(trialsLoopScheduler);
     flowScheduler.add(trialsLoopEnd);
-    flowScheduler.add(ITIRoutineBegin());
-    flowScheduler.add(ITIRoutineEachFrame());
-    flowScheduler.add(ITIRoutineEnd());
+    // flowScheduler.add(ITIRoutineBegin());
+    // flowScheduler.add(ITIRoutineEachFrame());
+    // flowScheduler.add(ITIRoutineEnd());
     flowScheduler.add(ThanksRoutineBegin());
     flowScheduler.add(ThanksRoutineEachFrame());
     flowScheduler.add(ThanksRoutineEnd());
@@ -233,6 +234,7 @@ var ThanksMaxDurationReached;
 var _thanksKey_allKeys;
 var ThanksMaxDuration;
 var ThanksComponents;
+var waitText;
 
 function ThanksRoutineBegin(snapshot) {
     return async function () {
@@ -365,7 +367,6 @@ async function updateInfo() {
     return Scheduler.Event.NEXT;
 }
 
-
 // =========================
 var WelcomeClock;
 var welcomeText;
@@ -380,6 +381,25 @@ var prevSession;
 var frameIdx;
 var stimPaths;
 var actKeys;
+
+var learningSession;        // true for session 1 (learning)
+const LEARNING_SESSION_CODE = '0';
+var practiceEndedShown = false;
+var showLearningEndThisTrial = false;
+var trialHadResponse = false;
+
+var currentImageDur;        // per-frame image duration
+var currentTotalDur;        // per-frame total duration (image + delay/response)
+var lastFeedbackMsg = '';   // text to show in feedback routine
+var lastWasScored = false;  // whether last frame had a scored response
+
+var frameText;              // top-of-screen instruction per frame
+var FeedbackClock;
+var feedbackText;
+var FeedbackComponents;
+var FeedbackMaxDuration;
+var FeedbackMaxDurationReached;
+
 
 var SessionIntroClock;
 var sessText;
@@ -403,6 +423,13 @@ var itiClock;
 var globalClock;
 var routineTimer;
 
+// NEW: Learning Session End globals
+var LearningSessionEndClock;
+var learningEndText;
+var learningEndKey;
+var LearningSessionEndComponents;
+var _learningEndKey_allKeys;
+
 async function experimentInit() {
     // ---- Globals Routine ----
     GlobalsClock = new util.Clock();
@@ -418,7 +445,13 @@ async function experimentInit() {
         name: 'sessText',
         text: 'Press Enter to start',
         font: 'Open Sans',
-        pos: [0, 0], draggable: false, height: 0.05,
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.04,
+        wrapWidth: 0.8,
+        draggable: false,
         languageStyle: 'LTR',
         color: new util.Color('white'),
         depth: 0.0
@@ -432,7 +465,13 @@ async function experimentInit() {
         name: 'trialText',
         text: 'Press Enter to start the trial',
         font: 'Open Sans',
-        pos: [0, 0], draggable: false, height: 0.05,
+        pos: [-0.4, 0],
+        anchor: 'center',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        draggable: false,
+        height: 0.05,
+        wrapWidth: 1.2,
         languageStyle: 'LTR',
         color: new util.Color('white'),
         depth: 0.0
@@ -454,8 +493,52 @@ async function experimentInit() {
         interpolate: true,
         depth: 0.0
     });
-
+    // ---- Frame instructions text (top of screen) ----
+    frameText = new visual.TextStim({
+        win: psychoJS.window,
+        name: 'frameText',
+        text: '',
+        font: 'Open Sans',
+        pos: [0, 0.4],          // top-ish
+        draggable: false,
+        height: 0.04,
+        wrapWidth: 1.2,
+        languageStyle: 'LTR',
+        color: new util.Color('white'),
+        depth: -1.0
+    });
     resp = new core.Keyboard({psychoJS, clock: new util.Clock(), waitForStart: true});
+
+    // ---- Feedback (for learning session frames 3 & 4) ----
+    FeedbackClock = new util.Clock();
+    feedbackText = new visual.TextStim({
+        win: psychoJS.window,
+        name: 'feedbackText',
+        text: '',
+        font: 'Open Sans',
+        pos: [0, -0.3],        // near bottom
+        draggable: false,
+        height: 0.05,
+        wrapWidth: 1.2,
+        languageStyle: 'LTR',
+        color: new util.Color('white'),
+        depth: 0.0
+    });
+
+    // ---- "Wait" text during delay (learning session) ----
+    waitText = new visual.TextStim({
+        win: psychoJS.window,
+        name: 'waitText',
+        text: '',
+        font: 'Open Sans',
+        pos: [0, 0],            // center of the screen
+        draggable: false,
+        height: 0.08,
+        wrapWidth: 1.2,
+        languageStyle: 'LTR',
+        color: new util.Color('white'),
+        depth: 1.0
+    });
 
     // ---- ITI ----
     ITIClock = new util.Clock();
@@ -483,23 +566,26 @@ async function experimentInit() {
             `
 Task instructions:
 • You will complete a 1-back category task.
+
 • Each trial contains 6 images (frames). Starting from the 2nd frame, press:
     - 'X' if the current image's CATEGORY matches the previous frame,
     - 'B' if it DOES NOT match.
+
 • Each frame is shown for 500 ms, followed by a 2-second interval.
+
 • There are 5 sessions of 20 trials each. You can take short breaks between sessions.
 
 Press Enter to start.`,
         font: 'Open Sans',
 
-        // ↓↓↓ the important bits ↓↓↓
-        pos: [0, 0],            // center of the screen
-        anchor: 'center',       // anchor the text box at its center
-        alignHoriz: 'center',   // center-align lines of text
-        alignVert: 'center',    // center-align vertically if multiple lines
-        height: 0.028,          // smaller text (try 0.024–0.032 to taste)
-        wrapWidth: 0.9,         // narrower paragraph width so it reads nicer
-        // ↑↑↑ the important bits ↑↑↑
+        // ↓↓↓ layout bits ↓↓↓
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.028,
+        wrapWidth: 0.8,
+        // ↑↑↑ layout bits ↑↑↑
 
         draggable: false,
         color: new util.Color('white'),
@@ -534,6 +620,37 @@ finished uploading (this may take a few seconds / you might have to press Enter 
     let FINAL_SURVEY_CODE = '';
 
     thanksKey = new core.Keyboard({psychoJS, clock: new util.Clock(), waitForStart: true});
+
+    // ---- Learning Session End (new routine) ----
+    LearningSessionEndClock = new util.Clock();
+    learningEndText = new visual.TextStim({
+        win: psychoJS.window,
+        name: 'learningEndText',
+        text:
+            `You have completed the learning session.
+
+From now on, the real sessions will begin.
+The task will run at normal speed, without extra
+frame-by-frame instructions or feedback.
+            
+Press Enter to continue to the real sessions.`,
+        font: 'Open Sans',
+        draggable: false,
+        pos: [-0.4, 0],
+        anchor: 'left',
+        alignHoriz: 'left',
+        alignVert: 'center',
+        height: 0.04,
+        wrapWidth: 0.8,
+        languageStyle: 'LTR',
+        color: new util.Color('white'),
+        depth: 0.0
+    });
+    learningEndKey = new core.Keyboard({
+        psychoJS,
+        clock: new util.Clock(),
+        waitForStart: true
+    });
 
     return Scheduler.Event.NEXT;
 }
@@ -614,6 +731,110 @@ function GlobalsRoutineEnd(snapshot) {
     };
 }
 
+/// =========================
+// LearningSessionEnd Routine
+// =========================
+
+function LearningSessionEndRoutineBegin(snapshot) {
+    return async function () {
+        TrialHandler.fromSnapshot(snapshot);
+
+        t = 0;
+        frameN = -1;
+        continueRoutine = true;
+        routineForceEnded = false;
+
+        LearningSessionEndClock.reset();
+        routineTimer.reset();
+
+        learningEndKey.keys = undefined;
+        learningEndKey.rt = undefined;
+        _learningEndKey_allKeys = [];
+
+        LearningSessionEndComponents = [learningEndText, learningEndKey];
+        LearningSessionEndComponents.forEach(c => {
+            if ('status' in c) c.status = PsychoJS.Status.NOT_STARTED;
+        });
+
+        if (!showLearningEndThisTrial) {
+            continueRoutine = false;
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+        psychoJS.experiment.addData('LearningSessionEnd.started', globalClock.getTime());
+        return Scheduler.Event.NEXT;
+    };
+}
+
+function LearningSessionEndRoutineEachFrame() {
+    return async function () {
+        if (!showLearningEndThisTrial || !continueRoutine) {
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+        t = LearningSessionEndClock.getTime();
+        frameN += 1;
+
+        // draw text
+        if (t >= 0.0 && learningEndText.status === PsychoJS.Status.NOT_STARTED) {
+            learningEndText.tStart = t;
+            learningEndText.frameNStart = frameN;
+            learningEndText.setAutoDraw(true);
+        }
+
+        // start keyboard
+        if (t >= 0.0 && learningEndKey.status === PsychoJS.Status.NOT_STARTED) {
+            learningEndKey.status = PsychoJS.Status.STARTED;
+            psychoJS.window.callOnFlip(() => learningEndKey.clock.reset());
+            psychoJS.window.callOnFlip(() => learningEndKey.start());
+            psychoJS.window.callOnFlip(() => learningEndKey.clearEvents());
+        }
+
+        let theseKeys = learningEndKey.getKeys({keyList: ['enter', 'return', 'space'], waitRelease: false});
+        _learningEndKey_allKeys = _learningEndKey_allKeys.concat(theseKeys);
+        if (_learningEndKey_allKeys.length > 0) {
+            continueRoutine = false;
+        }
+
+        if (psychoJS.experiment.experimentEnded ||
+            psychoJS.eventManager.getKeys({keyList: ['escape']}).length > 0) {
+            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+        }
+
+        if (!continueRoutine) {
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+
+        continueRoutine = LearningSessionEndComponents.some(
+            c => c.status !== PsychoJS.Status.FINISHED
+        );
+
+        return continueRoutine ? Scheduler.Event.FLIP_REPEAT : Scheduler.Event.NEXT;
+    };
+}
+
+function LearningSessionEndRoutineEnd(snapshot) {
+    return async function () {
+        if (!showLearningEndThisTrial) {
+            continueRoutine = false;
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+        LearningSessionEndComponents.forEach(c => {
+            if ('setAutoDraw' in c) c.setAutoDraw(false);
+        });
+        learningEndKey.stop();
+
+        psychoJS.experiment.addData('LearningSessionEnd.stopped', globalClock.getTime());
+
+        showLearningEndThisTrial = false;
+        if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
+        return Scheduler.Event.NEXT;
+    };
+}
+
+
 // ------------- Trials (outer loop) -------------
 var trials;
 
@@ -623,10 +844,14 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
 
         trials = new TrialHandler({
             psychoJS,
-            nReps: 1, method: TrialHandler.Method.SEQUENTIAL,
-            extraInfo: expInfo, originPath: undefined,
-            trialList: 'resources/1back_category_trials.csv',
-            seed: undefined, name: 'trials'
+            nReps: 1,
+            method: TrialHandler.Method.SEQUENTIAL,
+            extraInfo: expInfo,
+            originPath: undefined,
+            trialList: 'resources/1back_debug.csv',
+            // trialList: 'resources/1back_category_trials.csv',
+            seed: undefined,
+            name: 'trials'
         });
         psychoJS.experiment.addLoop(trials);
         currentLoop = trials;
@@ -635,10 +860,14 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
             snapshot = trials.getSnapshot();
 
             trialsLoopScheduler.add(importConditions(snapshot));
+
+            // Show session intro
             trialsLoopScheduler.add(SessionIntroRoutineBegin(snapshot));
             trialsLoopScheduler.add(SessionIntroRoutineEachFrame());
             trialsLoopScheduler.add(SessionIntroRoutineEnd(snapshot));
 
+
+            // Next: trial intro
             trialsLoopScheduler.add(TrialIntroRoutineBegin(snapshot));
             trialsLoopScheduler.add(TrialIntroRoutineEachFrame());
             trialsLoopScheduler.add(TrialIntroRoutineEnd(snapshot));
@@ -647,8 +876,30 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
             trialsLoopScheduler.add(framesLoopBegin(framesLoopScheduler, snapshot));
             trialsLoopScheduler.add(framesLoopScheduler);
             trialsLoopScheduler.add(framesLoopEnd);
-
             trialsLoopScheduler.add(trialsLoopEndIteration(trialsLoopScheduler, snapshot));
+            // check if we just left the learning session (session "0")
+            trialsLoopScheduler.add(async function () {
+                // Only trigger once, only if prevSession was the learning session and session actually changed
+                if (!practiceEndedShown &&
+                    String(prevSession) === LEARNING_SESSION_CODE
+                ) {
+                    practiceEndedShown = true;
+                    showLearningEndThisTrial = true;
+                } else {
+                    showLearningEndThisTrial = false;
+                }
+
+                return Scheduler.Event.NEXT;
+            });
+
+            // Route to the learning-session-end routine
+            trialsLoopScheduler.add(LearningSessionEndRoutineBegin(snapshot));
+            trialsLoopScheduler.add(LearningSessionEndRoutineEachFrame());
+            trialsLoopScheduler.add(LearningSessionEndRoutineEnd(snapshot));
+            trialsLoopScheduler.add(ITIRoutineBegin(snapshot));
+            trialsLoopScheduler.add(ITIRoutineEachFrame());
+            trialsLoopScheduler.add(ITIRoutineEnd(snapshot));
+
         });
 
         return Scheduler.Event.NEXT;
@@ -667,6 +918,8 @@ async function trialsLoopEnd() {
 function trialsLoopEndIteration(scheduler, snapshot) {
     return async function () {
         if (typeof snapshot !== 'undefined') {
+            prevSession = session;
+
             if (snapshot.finished) {
                 if (psychoJS.experiment.isEntryEmpty()) {
                     psychoJS.experiment.nextEntry(snapshot);
@@ -689,10 +942,13 @@ function framesLoopBegin(framesLoopScheduler, snapshot) {
 
         frames = new TrialHandler({
             psychoJS,
-            nReps: 6, method: TrialHandler.Method.SEQUENTIAL,
-            extraInfo: expInfo, originPath: undefined,
+            nReps: 6,
+            method: TrialHandler.Method.SEQUENTIAL,
+            extraInfo: expInfo,
+            originPath: undefined,
             trialList: undefined,
-            seed: undefined, name: 'frames'
+            seed: undefined,
+            name: 'frames'
         });
         psychoJS.experiment.addLoop(frames);
         currentLoop = frames;
@@ -704,6 +960,12 @@ function framesLoopBegin(framesLoopScheduler, snapshot) {
             framesLoopScheduler.add(FrameRoutineBegin(snapshot));
             framesLoopScheduler.add(FrameRoutineEachFrame());
             framesLoopScheduler.add(FrameRoutineEnd(snapshot));
+
+            // NEW: feedback routine after each frame
+            framesLoopScheduler.add(FeedbackRoutineBegin(snapshot));
+            framesLoopScheduler.add(FeedbackRoutineEachFrame());
+            framesLoopScheduler.add(FeedbackRoutineEnd(snapshot));
+
             framesLoopScheduler.add(framesLoopEndIteration(framesLoopScheduler, snapshot));
         });
 
@@ -870,7 +1132,29 @@ function SessionIntroRoutineBegin(snapshot) {
         // show only when session changes or at the very start
         if ((typeof prevSession === 'undefined') || (prevSession === null) || (session !== prevSession)) {
             continueRoutine = true;
-            sessText.setText(`Session: ${session}\nPress Enter to start`);
+
+            const sessStr = String(session);
+
+            if (sessStr === LEARNING_SESSION_CODE && !practiceEndedShown) {
+                // ---- Learning session intro (Session 1) ----
+                sessText.setText(
+                    `Learning Session (Practice)\n
+In this first session, the task will run more slowly.
+You will:
+
+• See on-screen instructions for each frame.
+• Have more time to view the images.
+• Receive feedback after you respond on the comparison frames.
+
+This learning session is slower than the normal sessions
+you will perform afterward.
+
+Press Enter to begin the learning session.`
+                );
+            } else {
+                // ---- All "normal" sessions (no extra 'completed learning' text here) ----
+                sessText.setText(`Session: ${session}\nPress Enter to start`);
+            }
         } else {
             continueRoutine = false;
         }
@@ -959,7 +1243,6 @@ function SessionIntroRoutineEnd(snapshot) {
         }
 
         sessKey.stop();
-        prevSession = session;
 
         routineTimer.reset();
         if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
@@ -1000,7 +1283,18 @@ function TrialIntroRoutineBegin(snapshot) {
         }
 
         stimPaths = [stim1, stim2, stim3, stim4, stim5, stim6];
-        actKeys = [null, low(act2), low(act3), low(act4), low(act5), low(act6)];
+        actKeys = [
+            null,
+            low(act2),
+            low(act3),
+            low(act4),
+            low(act5),
+            low(act6)
+        ];
+
+        trialHadResponse = false;
+        // ---- Learning session? (Session 1 only) ----
+        learningSession = (String(session) === '0');
 
         psychoJS.experiment.addData('TrialIntro.started', globalClock.getTime());
         TrialIntroMaxDuration = null;
@@ -1112,13 +1406,27 @@ function FrameRoutineBegin(snapshot) {
         continueRoutine = true;
         routineForceEnded = false;
 
+        // Determine durations: learning vs actual sessions
+        if (learningSession) {
+            currentImageDur = 1.5;           // 1500 ms
+            currentTotalDur = 1.5 + 2.0;     // 1.5s image + 4s delay/response
+        } else {
+            currentImageDur = 0.5;           // 500 ms
+            currentTotalDur = 0.5 + 2.0;     // 0.5s image + 2s delay/response
+        }
+
         FrameClock.reset(routineTimer.getTime());
-        routineTimer.add(2.500000); // 0.5s image + 2.0s response = 2.5s total
+        routineTimer.add(currentTotalDur); // 0.5s image + 2.0s response = 2.5s total
         FrameMaxDurationReached = false;
 
         resp.keys = undefined;
         resp.rt = undefined;
         _resp_allKeys = [];
+        lastFeedbackMsg = '';
+        lastWasScored = false;
+
+        if (waitText) waitText.setAutoDraw(false);
+        if (feedbackText) feedbackText.setAutoDraw(false);
 
         // ---- Begin Routine: safe prep of current frame ----
         frameIdx += 1;
@@ -1132,6 +1440,21 @@ function FrameRoutineBegin(snapshot) {
             currStim = normPath(rawStim) || fallbackStim;
             img.setImage(currStim);
 
+            // Top-of-screen instructions (learning session only)
+            if (learningSession) {
+                if (frameIdx === 0) {
+                    frameText.setText('Remember the CATEGORY of this object.');
+                } else if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+                    frameText.setText(
+                        'Compare with the PREVIOUS image.\n' +
+                        'Press X if same category, B if different.'
+                    );
+                } else {
+                    frameText.setText('');
+                }
+            } else {
+                frameText.setText('');
+            }
             psychoJS.eventManager.clearEvents();
         }
         // -----------------------------------------------
@@ -1139,7 +1462,7 @@ function FrameRoutineBegin(snapshot) {
         psychoJS.experiment.addData('Frame.started', globalClock.getTime());
         FrameMaxDuration = null;
 
-        FrameComponents = [img, resp];
+        FrameComponents = [img, resp, frameText, waitText, feedbackText];
         FrameComponents.forEach(c => {
             if ('status' in c) c.status = PsychoJS.Status.NOT_STARTED;
         });
@@ -1155,13 +1478,13 @@ function FrameRoutineEachFrame() {
         t = FrameClock.getTime();
         frameN += 1;
 
-        // image on for 0.5s
+        // Show image during image window
         if (t >= 0.0 && img.status === PsychoJS.Status.NOT_STARTED) {
             img.tStart = t;
             img.frameNStart = frameN;
             img.setAutoDraw(true);
         }
-        frameRemains = 0.0 + 0.5 - psychoJS.window.monitorFramePeriod * 0.75;
+        frameRemains = 0.0 + currentImageDur - psychoJS.window.monitorFramePeriod * 0.75;
         if (img.status === PsychoJS.Status.STARTED && t >= frameRemains) {
             img.tStop = t;
             img.frameNStop = frameN;
@@ -1169,35 +1492,105 @@ function FrameRoutineEachFrame() {
             img.setAutoDraw(false);
         }
 
-        // response active during the 2.0s delay
-        if (t >= 0.5 && resp.status === PsychoJS.Status.NOT_STARTED) {
-            resp.tStart = t;
-            resp.frameNStart = frameN;
-            psychoJS.window.callOnFlip(() => {
-                resp.clock.reset();
-            });
-            psychoJS.window.callOnFlip(() => {
-                resp.start();
-            });
-            psychoJS.window.callOnFlip(() => {
-                resp.clearEvents();
-            });
-        }
-        frameRemains = 0.0 + 2.5 - psychoJS.window.monitorFramePeriod * 0.75;
-        if (resp.status === PsychoJS.Status.STARTED && t >= frameRemains) {
-            resp.tStop = t;
-            resp.frameNStop = frameN;
-            resp.status = PsychoJS.Status.FINISHED;
+        // Show top text for whole frame when present
+        if (learningSession && frameText.text) {
+            if (t >= 0.0 && frameText.status === PsychoJS.Status.NOT_STARTED) {
+                frameText.tStart = t;
+                frameText.frameNStart = frameN;
+                frameText.setAutoDraw(true);
+            }
+            // keep until frame end; stopped in FrameRoutineEnd
         }
 
-        if (resp.status === PsychoJS.Status.STARTED) {
-            let theseKeys = resp.getKeys({keyList: ['x', 'b'], waitRelease: false});
-            _resp_allKeys = _resp_allKeys.concat(theseKeys);
-            if (_resp_allKeys.length > 0) {
-                const last = _resp_allKeys[_resp_allKeys.length - 1];
-                resp.keys = last.name;
-                resp.rt = last.rt;
-                resp.duration = last.duration;
+        // "Wait..." during delay for learning session, frames 1 - 5
+        if (learningSession && frameIdx >= 0 && frameIdx <= 5) {
+            // delay starts after the image offset
+            if (t >= currentImageDur && waitText.status === PsychoJS.Status.NOT_STARTED) {
+                if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+                    waitText.setText('Respond');
+                } else {
+                    waitText.setText('Wait...');
+                }
+                waitText.tStart = t;
+                waitText.frameNStart = frameN;
+                waitText.setAutoDraw(true);
+                waitText.status = PsychoJS.Status.STARTED;
+            }
+            // stop at end of frame
+            const frameEnd = currentTotalDur - psychoJS.window.monitorFramePeriod * 0.75;
+            if (waitText.status === PsychoJS.Status.STARTED && t >= frameEnd) {
+                waitText.tStop = t;
+                waitText.frameNStop = frameN;
+                waitText.status = PsychoJS.Status.FINISHED;
+                waitText.setAutoDraw(false);
+            }
+        }
+
+
+        // response active during the 2.0s delay
+        if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+            // start collecting after image offset
+            if (t >= currentImageDur && resp.status === PsychoJS.Status.NOT_STARTED) {
+                resp.tStart = t;
+                resp.frameNStart = frameN;
+                psychoJS.window.callOnFlip(() => {
+                    resp.clock.reset();
+                });
+                psychoJS.window.callOnFlip(() => {
+                    resp.start();
+                });
+                psychoJS.window.callOnFlip(() => {
+                    resp.clearEvents();
+                });
+            }
+
+            // end of frame / response window
+            frameRemains = 0.0 + currentTotalDur - psychoJS.window.monitorFramePeriod * 0.75;
+            if (resp.status === PsychoJS.Status.STARTED && t >= frameRemains) {
+                resp.tStop = t;
+                resp.frameNStop = frameN;
+                resp.status = PsychoJS.Status.FINISHED;
+            }
+
+            // handle key press: IMMEDIATE FEEDBACK in learning session
+            if (resp.status === PsychoJS.Status.STARTED) {
+                let theseKeys = resp.getKeys({keyList: ['x', 'b'], waitRelease: false});
+
+                if (theseKeys.length > 0 && typeof resp.keys === 'undefined') {
+                    // first key press in this frame
+                    const last = theseKeys[theseKeys.length - 1];
+                    resp.keys = last.name;
+                    resp.rt = last.rt;
+                    resp.duration = last.duration;
+
+                    trialHadResponse = true;
+                    if (learningSession) {
+                        const expected = actKeys[frameIdx];  // 'x' or 'b' from CSV
+                        const key = resp.keys ? resp.keys.toLowerCase() : null;
+                        let fb = '';
+
+                        if (!key) {
+                            fb = 'Too slow! Please try to respond within the time window.'; // not really used here
+                        } else if (expected && key === expected) {
+                            fb = 'Correct!';
+                            lastWasScored = true;
+                        } else if (expected) {
+                            fb = 'Incorrect.';
+                            lastWasScored = true;
+                        }
+
+                        lastFeedbackMsg = fb;
+
+                        if (fb) {
+                            feedbackText.setText(fb);
+                            feedbackText.setAutoDraw(true);
+                        }
+                    }
+
+                    // stop taking more keys for this frame
+                    resp.stop();
+                    resp.status = PsychoJS.Status.FINISHED;
+                }
             }
         }
 
@@ -1227,13 +1620,50 @@ function FrameRoutineEnd(snapshot) {
         FrameComponents.forEach(c => {
             if (typeof c.setAutoDraw === 'function') c.setAutoDraw(false);
         });
+        waitText.setAutoDraw(false);
+        frameText.setAutoDraw(false);
+
         psychoJS.experiment.addData('Frame.stopped', globalClock.getTime());
 
-        if (currentLoop instanceof MultiStairHandler) currentLoop.addResponse(resp.corr, level);
-        psychoJS.experiment.addData('resp.keys', resp.keys);
-        if (typeof resp.keys !== 'undefined') {
-            psychoJS.experiment.addData('resp.rt', resp.rt);
-            psychoJS.experiment.addData('resp.duration', resp.duration);
+        // Only log/score responses for frames 3 and 4
+        if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+            const expected = actKeys[frameIdx];   // act3 for frameIdx=2, act4 for frameIdx=3
+            const key = resp.keys ? resp.keys.toLowerCase() : null;
+
+            let correct = null;
+            let fb = '';
+
+            if (!key) {
+                correct = 0;
+                fb = 'Too slow! Please try to respond within the time window.';
+            } else if (expected && key === expected) {
+                correct = 1;
+                fb = 'Correct!';
+            } else if (expected) {
+                correct = 0;
+                fb = 'Incorrect.';
+            } else {
+                // no expected key defined
+                correct = null;
+                fb = '';
+            }
+
+            if (currentLoop instanceof MultiStairHandler) currentLoop.addResponse(resp.corr, level);
+
+            psychoJS.experiment.addData('resp.keys', resp.keys);
+            if (typeof resp.keys !== 'undefined') {
+                psychoJS.experiment.addData('resp.rt', resp.rt);
+                psychoJS.experiment.addData('resp.duration', resp.duration);
+            }
+
+            // Save correctness for per-frame columns if you like:
+            psychoJS.experiment.addData(`resp_frame${frameIdx + 1}_correct`, correct);
+
+            lastWasScored = learningSession && (fb !== '');
+            lastFeedbackMsg = fb;
+        } else {
+            lastWasScored = false;
+            lastFeedbackMsg = '';
         }
 
         resp.stop();
@@ -1243,8 +1673,102 @@ function FrameRoutineEnd(snapshot) {
         } else if (FrameMaxDurationReached) {
             FrameClock.add(FrameMaxDuration);
         } else {
-            FrameClock.add(2.500000);
+            FrameClock.add(currentTotalDur);
         }
+
+        if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
+        return Scheduler.Event.NEXT;
+    };
+}
+
+// =========================
+// Feedback (learning session, after frames 3 & 4)
+// =========================
+function FeedbackRoutineBegin(snapshot) {
+    return async function () {
+        TrialHandler.fromSnapshot(snapshot);
+
+        t = 0;
+        frameN = -1;
+        continueRoutine = true;
+        routineForceEnded = false;
+
+        FeedbackClock.reset();
+        routineTimer.reset();
+        FeedbackMaxDurationReached = false;
+
+        psychoJS.experiment.addData('Feedback.started', globalClock.getTime());
+        FeedbackMaxDuration = null;
+
+        // Only show feedback in learning session and when we scored a response
+        if (learningSession && lastWasScored && lastFeedbackMsg) {
+            feedbackText.setText(lastFeedbackMsg);
+        } else {
+            // nothing to show; end immediately
+            continueRoutine = false;
+        }
+
+        FeedbackComponents = [feedbackText];
+        FeedbackComponents.forEach(c => {
+            if ('status' in c) c.status = PsychoJS.Status.NOT_STARTED;
+        });
+
+        // Show feedback for 1.0 s
+        routineTimer.add(1.0);
+
+        return Scheduler.Event.NEXT;
+    };
+}
+
+function FeedbackRoutineEachFrame() {
+    return async function () {
+        if (!continueRoutine) {
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+
+        t = FeedbackClock.getTime();
+        frameN += 1;
+
+        if (t >= 0.0 && feedbackText.status === PsychoJS.Status.NOT_STARTED) {
+            feedbackText.tStart = t;
+            feedbackText.frameNStart = frameN;
+            feedbackText.setAutoDraw(true);
+        }
+
+        if (routineTimer.getTime() <= 0) {
+            continueRoutine = false;
+        }
+
+        if (psychoJS.experiment.experimentEnded ||
+            psychoJS.eventManager.getKeys({keyList: ['escape']}).length > 0) {
+            return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+        }
+
+        if (!continueRoutine) {
+            routineForceEnded = true;
+            return Scheduler.Event.NEXT;
+        }
+
+        continueRoutine = false;
+        FeedbackComponents.forEach(c => {
+            if ('status' in c && c.status !== PsychoJS.Status.FINISHED) continueRoutine = true;
+        });
+
+        if (continueRoutine) return Scheduler.Event.FLIP_REPEAT;
+        return Scheduler.Event.NEXT;
+    };
+}
+
+function FeedbackRoutineEnd(snapshot) {
+    return async function () {
+        FeedbackComponents.forEach(c => {
+            if (typeof c.setAutoDraw === 'function') c.setAutoDraw(false);
+        });
+        psychoJS.experiment.addData('Feedback.stopped', globalClock.getTime());
+
+        routineTimer.reset();
+        lastWasScored = false;  // reset
 
         if (currentLoop === psychoJS.experiment) psychoJS.experiment.nextEntry(snapshot);
         return Scheduler.Event.NEXT;
@@ -1278,7 +1802,16 @@ function ITIRoutineBegin(snapshot) {
 
         // local clock for 5s countdown
         itiClock.reset();
-
+        psychoJS.experiment.addData('trialHasResponse', trialHadResponse ? 1 : 0);
+        if (!trialHadResponse) {
+            itiText.setText(
+                'We did not detect any responses in the last trial.\n' +
+                'Please press X or B on the comparison images.\n\n' +
+                'Next trial in 5s – press Enter to start now.'
+            );
+        } else {
+            itiText.setText('Next trial in 5s - press Enter to start now');
+        }
         psychoJS.experiment.addData('ITI.started', globalClock.getTime());
         ITIMaxDuration = null;
 
