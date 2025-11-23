@@ -379,8 +379,8 @@ def make_chained_pair(
     trials = []
 
     # Track counts for each feature
+    feature_cols = list(feature_cols)
     feature_counts = {f: 0 for f in feature_cols}
-
     total_pairs = n_trials * n_chains
 
     for t in range(n_trials):
@@ -422,11 +422,12 @@ def make_chained_pair(
                 candidates.index,
                 p=(scores - scores.min() + 1e-6) / np.sum(scores - scores.min() + 1e-6)
             )
+
             s1 = int(pair_df.loc[idx_pick, "stim1"])
             s2 = int(pair_df.loc[idx_pick, "stim2"])
 
             seen_unordered.add((min(s1, s2), max(s1, s2)))
-            trial_idxs.append(idx_pick)
+            trial_idxs.append(int(idx_pick))
 
             # update feature counts
             for i, f in enumerate(feature_cols):
