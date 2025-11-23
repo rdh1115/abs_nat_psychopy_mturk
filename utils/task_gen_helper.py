@@ -359,9 +359,6 @@ def select_balanced_pairs_from_stimuli(
     return selected_pairs
 
 
-import random
-
-
 def make_chained_pair(
         pair_df: pd.DataFrame,
         n_trials: int,
@@ -408,13 +405,9 @@ def make_chained_pair(
 
             # Vectorized score computation
             n_current = len(trials) * n_chains + len(trial_idxs)
-            # matrix of feature values for all candidates
             feat_matrix = candidates[feature_cols].to_numpy()  # shape: (n_candidates, n_features)
-            # current ratios for each feature
             cur_ratios = np.array([feature_counts[f] / max(1, n_current) for f in feature_cols])
-            # new ratios if candidate is added
             new_ratios = (feat_matrix + cur_ratios * n_current) / (n_current + 1)
-            # score = negative L1 distance to 0.5 for each candidate
             scores = -np.abs(new_ratios - 0.5).sum(axis=1)
 
             # pick one candidate, weighted by score
@@ -422,10 +415,8 @@ def make_chained_pair(
                 candidates.index,
                 p=(scores - scores.min() + 1e-6) / np.sum(scores - scores.min() + 1e-6)
             )
-
             s1 = int(pair_df.loc[idx_pick, "stim1"])
             s2 = int(pair_df.loc[idx_pick, "stim2"])
-
             seen_unordered.add((min(s1, s2), max(s1, s2)))
             trial_idxs.append(int(idx_pick))
 
