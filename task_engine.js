@@ -37,8 +37,8 @@ function buildCsvFromExperiment(psychoJS) {
 }
 
 async function uploadCsvToSheets(csv, meta) {
-    // const fullWebAppUrl = WEB_APP_URL_PART1 + WEB_APP_URL_PART2;
-    const fullWebAppUrl = 'http://localhost:3000/upload'
+    const fullWebAppUrl = WEB_APP_URL_PART1 + WEB_APP_URL_PART2;
+    // const fullWebAppUrl = 'http://localhost:3000/upload'
 
     const payload = JSON.stringify({
         csv: csv,
