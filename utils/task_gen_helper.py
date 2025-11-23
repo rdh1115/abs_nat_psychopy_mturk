@@ -362,20 +362,25 @@ def select_balanced_pairs_from_stimuli(
 import random
 
 
-def make_chained_pair(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
+def make_chained_pair(
+        pair_df: pd.DataFrame,
+        n_trials: int,
+        n_chains: int,
+        feature_cols=("same_category", "same_obj", "same_pos"),
+):
     """
-    Build chained pairs for n_trials with n_chains comparisons each.
-    Each trial is a chain: (s0->s1), (s1->s2), ..., length n_chains.
-    Ensure 50/50 split on same_category feature across all selected pairs.
+    Vectorized version: Build chained pairs for n_trials with n_chains comparisons each.
+    Attempts to balance multiple binary features approximately 50/50.
 
     Returns:
-        trials: list[list[int]] of row indices in pair_df, or None if stuck.
+        trials: list[list[int]] of pair_df row indices, or None if stuck.
     """
     seen_unordered = set()
     trials = []
 
-    # Track same_category counts
-    same_cat_count = 0
+    # Track counts for each feature
+    feature_counts = {f: 0 for f in feature_cols}
+
     total_pairs = n_trials * n_chains
 
     for t in range(n_trials):
@@ -401,28 +406,31 @@ def make_chained_pair(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
             if len(candidates) == 0:
                 return None  # stuck
 
-            # Split candidates by same_category
-            sc1 = candidates[candidates["same_category"] == 1]
-            sc0 = candidates[candidates["same_category"] == 0]
+            # Vectorized score computation
+            n_current = len(trials) * n_chains + len(trial_idxs)
+            # matrix of feature values for all candidates
+            feat_matrix = candidates[feature_cols].to_numpy()  # shape: (n_candidates, n_features)
+            # current ratios for each feature
+            cur_ratios = np.array([feature_counts[f] / max(1, n_current) for f in feature_cols])
+            # new ratios if candidate is added
+            new_ratios = (feat_matrix + cur_ratios * n_current) / (n_current + 1)
+            # score = negative L1 distance to 0.5 for each candidate
+            scores = -np.abs(new_ratios - 0.5).sum(axis=1)
 
-            # Decide which group to pick to maintain 50/50
-            if same_cat_count / max(1, len(trials) * n_chains + len(trial_idxs)) < 0.5:
-                # pick same_category=1 if available
-                pick_group = sc1 if len(sc1) > 0 else sc0
-            else:
-                # pick same_category=0 if available
-                pick_group = sc0 if len(sc0) > 0 else sc1
-
-            r = pick_group.sample(n=1)
-            idx = int(r.index[0])
-            s1 = int(r.iloc[0]["stim1"])
-            s2 = int(r.iloc[0]["stim2"])
+            # pick one candidate, weighted by score
+            idx_pick = np.random.choice(
+                candidates.index,
+                p=(scores - scores.min() + 1e-6) / np.sum(scores - scores.min() + 1e-6)
+            )
+            s1 = int(pair_df.loc[idx_pick, "stim1"])
+            s2 = int(pair_df.loc[idx_pick, "stim2"])
 
             seen_unordered.add((min(s1, s2), max(s1, s2)))
-            trial_idxs.append(idx)
+            trial_idxs.append(idx_pick)
 
-            # Update same_category count
-            same_cat_count += r.iloc[0]["same_category"]
+            # update feature counts
+            for i, f in enumerate(feature_cols):
+                feature_counts[f] += pair_df.loc[idx_pick, f]
 
         trials.append(trial_idxs)
 
