@@ -14,9 +14,8 @@ const Status = PsychoJS.Status;
 let currentTaskConfig = null;
 
 // ========== Cloud upload config ==========
-// const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx43V8Aha-JTWTKj51PHQo5SkQztRsV0EYfyAsULh2-NQeFcC1Y8k6wYyhO0_5b_p2amg/exec';
-const WEB_APP_URL_PART1 = 'https://script.google.com/macros/s/AKfycbxWmyZZ5duXZCoFYcwdJdueZuoSMft1OAkx4Hru4-';
-const WEB_APP_URL_PART2 = '9ChvAQXoVI5zsxgfixJMWcGWkmpA/exec';
+const WEB_APP_URL_PART1 = 'https://script.google.com/macros/s/AKfycbzIg4Oz2dJsddfae9fPi_';
+const WEB_APP_URL_PART2 = '2xEVnSr2VDAyl8HNKY6SbJxxFnmnTcu--ZgfVERXGKWhLkrg/exec';
 const SECURE_TOKEN = 'fdajknarofr'
 
 // ========== Helpers: CSV & upload ==========
