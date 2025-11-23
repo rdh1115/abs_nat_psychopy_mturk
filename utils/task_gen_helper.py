@@ -362,7 +362,7 @@ def select_balanced_pairs_from_stimuli(
 import random
 
 
-def make_chained_pair_balanced(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
+def make_chained_pair(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
     """
     Build chained pairs for n_trials with n_chains comparisons each.
     Each trial is a chain: (s0->s1), (s1->s2), ..., length n_chains.
