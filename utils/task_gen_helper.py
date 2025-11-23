@@ -451,6 +451,8 @@ def select_balanced_chained_pair(
     best_trial_df = None
     best_mean = np.array([float('inf'), float('inf'), float('inf')])
     while n_tries < n_tries_limit:
+        if n_tries % 100 == 0:
+            print(f'Try {n_tries}...')
         trials = make_chained_pair(pair_df, n_trials, n_chains)
         flat_trials = [idx for trial in trials for idx in trial]
         trial_df = pair_df.loc[flat_trials].reset_index(drop=True)
