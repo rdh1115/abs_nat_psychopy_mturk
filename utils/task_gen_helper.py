@@ -359,47 +359,38 @@ def select_balanced_pairs_from_stimuli(
     return selected_pairs
 
 
-def make_chained_pair(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
+import random
+
+
+def make_chained_pair_balanced(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
     """
     Build chained pairs for n_trials with n_chains comparisons each.
-    Each trial is a chain:
-        (s0->s1), (s1->s2), ..., length n_chains.
+    Each trial is a chain: (s0->s1), (s1->s2), ..., length n_chains.
+    Ensure 50/50 split on same_category feature across all selected pairs.
 
-    We store the ROW INDICES of pair_df in trials:
-        trials: list[list[int]]
-
-    Unordered pairs {i,j} are used at most once across all trials.
     Returns:
-        trials or None if we get stuck.
+        trials: list[list[int]] of row indices in pair_df, or None if stuck.
     """
-    seen_unordered = set()  # {(min(i,j), max(i,j)), ...}
+    seen_unordered = set()
     trials = []
+
+    # Track same_category counts
+    same_cat_count = 0
+    total_pairs = n_trials * n_chains
 
     for t in range(n_trials):
         trial_idxs = []
 
         for k in range(n_chains):
             if k == 0:
-                # first comparison in this trial: any unused unordered pair
                 candidates = pair_df[~pair_df.apply(
                     lambda r: (min(r["stim1"], r["stim2"]),
                                max(r["stim1"], r["stim2"])) in seen_unordered,
                     axis=1
                 )]
-
-                if len(candidates) == 0:
-                    return None  # can't start this trial -> fail
-
-                r = candidates.sample(n=1)
-                idx = int(r.index[0])
-                s1 = int(r.iloc[0]["stim1"])
-                s2 = int(r.iloc[0]["stim2"])
-
             else:
-                # chain: next stim1 must be previous stim2
                 prev_idx = trial_idxs[-1]
                 s_prev2 = int(pair_df.loc[prev_idx, "stim2"])
-
                 candidates = pair_df[pair_df["stim1"] == s_prev2].copy()
                 candidates = candidates[~candidates.apply(
                     lambda r: (min(r["stim1"], r["stim2"]),
@@ -407,19 +398,34 @@ def make_chained_pair(pair_df: pd.DataFrame, n_trials: int, n_chains: int):
                     axis=1
                 )]
 
-                if len(candidates) == 0:
-                    return None  # stuck in this trial -> fail
+            if len(candidates) == 0:
+                return None  # stuck
 
-                r = candidates.sample(n=1)
-                idx = int(r.index[0])
-                s1 = s_prev2
-                s2 = int(r.iloc[0]["stim2"])
+            # Split candidates by same_category
+            sc1 = candidates[candidates["same_category"] == 1]
+            sc0 = candidates[candidates["same_category"] == 0]
 
-            # mark unordered pair as used
+            # Decide which group to pick to maintain 50/50
+            if same_cat_count / max(1, len(trials) * n_chains + len(trial_idxs)) < 0.5:
+                # pick same_category=1 if available
+                pick_group = sc1 if len(sc1) > 0 else sc0
+            else:
+                # pick same_category=0 if available
+                pick_group = sc0 if len(sc0) > 0 else sc1
+
+            r = pick_group.sample(n=1)
+            idx = int(r.index[0])
+            s1 = int(r.iloc[0]["stim1"])
+            s2 = int(r.iloc[0]["stim2"])
+
             seen_unordered.add((min(s1, s2), max(s1, s2)))
             trial_idxs.append(idx)
 
+            # Update same_category count
+            same_cat_count += r.iloc[0]["same_category"]
+
         trials.append(trial_idxs)
+
     return trials
 
 
