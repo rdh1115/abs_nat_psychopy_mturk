@@ -48,28 +48,81 @@ def pick_objs(df, n_objs):
     return catids
 
 
-def pick_locations(df, catid_to_positions, chosen_objs, loc_c=5):
-    rows = list()
-    for catid in chosen_objs:
-        cat, obj = catid
-        positions = sorted(catid_to_positions[catid])
+def pick_locations(df, catid_to_positions, chosen_objs, n_stimuli, loc_c=5):
+    """
+    Picks locations for chosen objects to meet a target total number of stimuli,
+    guaranteeing that the canonical location (loc_c) is always included if available.
 
-        # make sure there is a consistent location for task sampling
-        chosen_pos = [loc_c]
-        positions.remove(loc_c)
-        chosen_pos.append(random.sample(positions, k=1)[0])
+    Args:
+        df (pd.DataFrame): The full metadata DataFrame.
+        catid_to_positions (dict): Map from (cat, obj) to list of available positions.
+        chosen_objs (list): List of (cat, obj) tuples selected by pick_objs.
+        n_stimuli (int): The target total number of stimulus rows to return.
+        loc_c (int): The location to prioritize for every object. Defaults to 5, middle.
+
+    Returns:
+        list: A list of sampled rows (pd.Series) forming the subset DataFrame.
+    """
+    rows = list()
+    n_objects = len(chosen_objs)
+
+    if n_objects == 0:
+        return rows
+
+    # 1. Determine the total number of locations required for all objects combined
+    # This ensures n_stimuli is met/exceeded slightly if necessary
+
+    # Calculate the base and remainder for location counts per object,
+    # as evenly as possible across the n_objects.
+    base_locs_per_obj = n_stimuli // n_objects
+    remainder_stimuli = n_stimuli % n_objects
+
+    # 2. Iterate and sample locations, prioritizing loc_c
+    for i, catid in enumerate(chosen_objs):
+        cat, obj = catid
+        available_positions = sorted(catid_to_positions[catid])
+
+        # Determine how many locations this object should contribute
+        locs_to_pick = base_locs_per_obj
+        if i < remainder_stimuli:
+            locs_to_pick += 1
+
+        chosen_pos = []
+
+        if loc_c in available_positions:
+            chosen_pos.append(loc_c)
+            # Remove loc_c from available positions to avoid sampling it twice
+            remaining_available = [pos for pos in available_positions if pos != loc_c]
+
+            # Reduce the count of locations we still need to sample
+            locs_to_pick -= 1
+        else:
+            remaining_available = available_positions
+
+        # Sample the rest of the required unique locations from the remaining pool
+        remaining_to_sample = max(0, locs_to_pick)
+
+        actual_remaining_to_sample = min(remaining_to_sample, len(remaining_available))
+
+        if actual_remaining_to_sample > 0:
+            extra_pos = random.sample(remaining_available, k=actual_remaining_to_sample)
+            chosen_pos.extend(extra_pos)
+
+        # 3. Sample one row (stimulus) per chosen (object, location) combination
         for pos in chosen_pos:
             subset = df[
                 (df["cat_1b"] == cat) &
                 (df["id_1b"] == obj) &
                 (df["pos_1b"] == pos)
                 ]
+            # Sample one row (stimulus) per position
             row = subset.sample(1)
             rows.append(row)
+
     return rows
 
 
-def sample_df(hvm_dir, n_objs, grid_size, df_path=None):
+def sample_df(hvm_dir, n_objs, n_stimuli, grid_size, df_path=None):
     meta = HvMMetaData(hvm_dir)
     img_loader = HvMImageLoader(
         root_dir=hvm_dir,
@@ -84,7 +137,7 @@ def sample_df(hvm_dir, n_objs, grid_size, df_path=None):
     else:
         catid_to_positions = img_loader._task_cache.catid_to_positions
         chosen_objs = pick_objs(df, n_objs)
-        rows = pick_locations(df, catid_to_positions, chosen_objs, loc_c=5)
+        rows = pick_locations(df, catid_to_positions, chosen_objs, n_stimuli)
         df_subset = pd.concat(rows, ignore_index=True)
         df_subset.to_csv(df_path)
         print(f'Saving subset csv at {df_path}')
@@ -443,6 +496,8 @@ def select_balanced_chained_pair(
 
         n_tries += 1
     return best_trial_df, trials
+
+
 def make_unordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
     """
     Given a stimulus dataframe build a dataframe of all unique unordered pairs
@@ -487,5 +542,3 @@ def make_unordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
 
     pair_df = pd.DataFrame(rows)
     return pair_df
-
-
