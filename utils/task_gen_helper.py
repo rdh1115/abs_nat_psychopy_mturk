@@ -165,7 +165,10 @@ def move_images_to_local_folder(df: pd.DataFrame, images_dir: Path) -> pd.DataFr
     shutil.rmtree(images_dir / 'Variation03_20110128', True)
     shutil.rmtree(images_dir / 'Variation06_20110131', True)
 
-    fps = df['filename'].unique()
+    if 'stim1_fp' in df.columns and 'stim2_fp' in df.columns:
+        fps = pd.concat([df['stim1_fp'], df['stim2_fp']]).unique()
+    else:
+        fps = df['filename'].unique()
     for fp in fps:
         fp = Path(fp)
         new_fp = _subpath_after(
