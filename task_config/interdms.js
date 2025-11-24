@@ -2,11 +2,11 @@
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: 'interdms_position_identity_trials',
+    expName: 'interdms_position_identity',
 
     // Which CSV to use for trials
-    trialsCsv: 'resources/interdms_debug.csv',
-    // trialsCsv: 'resources/interdms_position_identity_trials.csv',
+    // trialsCsv: 'resources/interdms_debug.csv',
+    trialsCsv: 'resources/interdms_position_identity_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -26,8 +26,8 @@ export const TASK_CONFIG = {
     // Timings (in seconds)
     timings: {
         learning: {
-            image: 0.5,
-            total: 0.5 + 2.0
+            image: 1.5,
+            total: 1.5 + 2.0
         },
         main: {
             image: 0.5,

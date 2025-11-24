@@ -5,8 +5,8 @@ export const TASK_CONFIG = {
     expName: '1back_category',
 
     // Which CSV to use for trials
-    trialsCsv: 'resources/1back_debug.csv',
-    // trialsCsv: 'resources/1back_category_trials.csv',
+    // trialsCsv: 'resources/1back_debug.csv',
+    trialsCsv: 'resources/1back_category_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [

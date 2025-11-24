@@ -295,6 +295,12 @@ def make_ordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
                 "same_category": same_category,
                 "same_obj": same_obj,
                 "same_pos": same_pos,
+                "stim1_category": s1["cat_1b"],
+                "stim2_category": s2["cat_1b"],
+                "stim1_obj": s1["id_1b"],
+                "stim2_obj": s2["id_1b"],
+                "stim1_pos": s1["pos_1b"],
+                "stim2_pos": s2["pos_1b"],
                 "stim1_fp": s1["re_filename"],
                 "stim2_fp": s2["re_filename"],
             }
