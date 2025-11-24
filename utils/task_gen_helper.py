@@ -19,7 +19,7 @@ from pulp import (
 from task.base import HvMTaskDataset
 from task.multi_task import TASK_NAME_TASK_INDEX
 from utils.helper import _subpath_after, TaskConfig
-from utils.stim_io import HvMMetaData, HvMImageLoader, HvMImageMapper
+from utils.stim_io import HvMMetaData, HvMImageLoader, HvMImageMapper, localize_csv_filename
 
 
 def pick_objs(df, n_objs):
@@ -139,6 +139,7 @@ def sample_df(hvm_dir, n_objs, n_stimuli, grid_size, df_path=None):
         chosen_objs = pick_objs(df, n_objs)
         rows = pick_locations(df, catid_to_positions, chosen_objs, n_stimuli)
         df_subset = pd.concat(rows, ignore_index=True)
+
         df_subset.to_csv(df_path)
         print(f'Saving subset csv at {df_path}')
 
@@ -211,7 +212,7 @@ def build_csv_from_dataset(
     return df
 
 
-def move_images_to_local_folder(df: pd.DataFrame, images_dir: Path) -> pd.DataFrame:
+def move_images_to_local_folder(df: pd.DataFrame, images_dir: Path, local_stim_dir: Path = None) -> pd.DataFrame:
     project_dir = Path.cwd().parent
     images_dir = project_dir / 'resources' / images_dir
     shutil.rmtree(images_dir / 'Variation00_20110203', True)
@@ -224,6 +225,10 @@ def move_images_to_local_folder(df: pd.DataFrame, images_dir: Path) -> pd.DataFr
         fps = df['filename'].unique()
     for fp in fps:
         fp = Path(fp)
+        if local_stim_dir is not None:
+            fp = localize_csv_filename(
+                local_stim_dir, fp, segment='HvM_with_discfade'
+            )
         new_fp = _subpath_after(
             fp, segment='HvM_with_discfade'
         )
