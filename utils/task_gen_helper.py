@@ -224,92 +224,6 @@ def get_stim_pairs(
     return stim_pairs, features
 
 
-def make_unordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Given a stimulus dataframe build a dataframe of all unique unordered pairs
-    and compute 3 binary features per pair.
-
-    Columns in output:
-        stim1, stim2 : row indices of the stimuli in stim_df
-        same_category, same_obj, same_pos : example 0/1 features
-
-    Customize the feature definitions as needed.
-    """
-
-    idx = stim_df.index.tolist()
-    pairs = itertools.combinations(idx, 2)  # all i < j
-
-    rows = []
-    for i, j in pairs:
-        s1 = stim_df.loc[i]
-        s2 = stim_df.loc[j]
-
-        same_category = int(s1["cat_1b"] == s2["cat_1b"])
-        same_obj = int(s1["id_1b"] == s2["id_1b"])
-        same_pos = int(s1["pos_1b"] == s2["pos_1b"])
-
-        rows.append(
-            {
-                "stim1": i,
-                "stim2": j,
-                "same_category": same_category,
-                "same_obj": same_obj,
-                "same_pos": same_pos,
-                "stim1_fp": s1["re_filename"],
-                "stim2_fp": s2["re_filename"],
-            }
-        )
-
-    pair_df = pd.DataFrame(rows)
-    return pair_df
-
-
-def make_ordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Given a stimulus dataframe, build a dataframe of all ordered pairs (i -> j),
-    i != j, and compute 3 binary features per pair.
-
-    Output columns:
-        stim1, stim2 : row indices of the stimuli in stim_df
-        same_category, same_obj, same_pos : 0/1 features
-        stim1_fp, stim2_fp : file paths for each stimulus
-    """
-
-    idx = stim_df.index.tolist()
-    # all ordered pairs i -> j with i != j
-    pairs = itertools.permutations(idx, 2)
-
-    rows = []
-    for i, j in pairs:
-        s1 = stim_df.loc[i]
-        s2 = stim_df.loc[j]
-
-        same_category = int(s1["cat_1b"] == s2["cat_1b"])
-        same_obj = int(s1["id_1b"] == s2["id_1b"])
-        same_pos = int(s1["pos_1b"] == s2["pos_1b"])
-
-        rows.append(
-            {
-                "stim1": i,
-                "stim2": j,
-                "same_category": same_category,
-                "same_obj": same_obj,
-                "same_pos": same_pos,
-                "stim1_category": s1["cat_1b"],
-                "stim2_category": s2["cat_1b"],
-                "stim1_obj": s1["id_1b"],
-                "stim2_obj": s2["id_1b"],
-                "stim1_pos": s1["pos_1b"],
-                "stim2_pos": s2["pos_1b"],
-                "stim1_fp": s1["re_filename"],
-                "stim2_fp": s2["re_filename"],
-            }
-        )
-
-    pair_df = pd.DataFrame(rows)
-    return pair_df
-
-
 def select_balanced_pairs_from_stimuli(
         stim_df: pd.DataFrame,
         n_pairs: int = 100,
@@ -366,6 +280,52 @@ def select_balanced_pairs_from_stimuli(
     chosen_idx = [i for i in idx if x[i].value() > 0.5]
     selected_pairs = pair_df.loc[chosen_idx].reset_index(drop=True)
     return selected_pairs
+
+
+def make_ordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Given a stimulus dataframe, build a dataframe of all ordered pairs (i -> j),
+    i != j, and compute 3 binary features per pair.
+
+    Output columns:
+        stim1, stim2 : row indices of the stimuli in stim_df
+        same_category, same_obj, same_pos : 0/1 features
+        stim1_fp, stim2_fp : file paths for each stimulus
+    """
+
+    idx = stim_df.index.tolist()
+    # all ordered pairs i -> j with i != j
+    pairs = itertools.permutations(idx, 2)
+
+    rows = []
+    for i, j in pairs:
+        s1 = stim_df.loc[i]
+        s2 = stim_df.loc[j]
+
+        same_category = int(s1["cat_1b"] == s2["cat_1b"])
+        same_obj = int(s1["id_1b"] == s2["id_1b"] and same_category)
+        same_pos = int(s1["pos_1b"] == s2["pos_1b"])
+
+        rows.append(
+            {
+                "stim1": i,
+                "stim2": j,
+                "same_category": same_category,
+                "same_obj": same_obj,
+                "same_pos": same_pos,
+                "stim1_category": s1["cat_1b"],
+                "stim2_category": s2["cat_1b"],
+                "stim1_obj": s1["id_1b"],
+                "stim2_obj": s2["id_1b"],
+                "stim1_pos": s1["pos_1b"],
+                "stim2_pos": s2["pos_1b"],
+                "stim1_fp": s1["re_filename"],
+                "stim2_fp": s2["re_filename"],
+            }
+        )
+
+    pair_df = pd.DataFrame(rows)
+    return pair_df
 
 
 def make_chained_pair(
@@ -483,3 +443,49 @@ def select_balanced_chained_pair(
 
         n_tries += 1
     return best_trial_df, trials
+def make_unordered_pair_df_with_features(stim_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Given a stimulus dataframe build a dataframe of all unique unordered pairs
+    and compute 3 binary features per pair.
+
+    Columns in output:
+        stim1, stim2 : row indices of the stimuli in stim_df
+        same_category, same_obj, same_pos : example 0/1 features
+
+    Customize the feature definitions as needed.
+    """
+
+    idx = stim_df.index.tolist()
+    pairs = itertools.combinations(idx, 2)  # all i < j
+
+    rows = []
+    for i, j in pairs:
+        s1 = stim_df.loc[i]
+        s2 = stim_df.loc[j]
+
+        same_category = int(s1["cat_1b"] == s2["cat_1b"])
+        same_obj = int(s1["id_1b"] == s2["id_1b"] and same_category)
+        same_pos = int(s1["pos_1b"] == s2["pos_1b"])
+
+        rows.append(
+            {
+                "stim1": i,
+                "stim2": j,
+                "same_category": same_category,
+                "same_obj": same_obj,
+                "same_pos": same_pos,
+                "stim1_category": s1["cat_1b"],
+                "stim2_category": s2["cat_1b"],
+                "stim1_obj": s1["id_1b"],
+                "stim2_obj": s2["id_1b"],
+                "stim1_pos": s1["pos_1b"],
+                "stim2_pos": s2["pos_1b"],
+                "stim1_fp": s1["re_filename"],
+                "stim2_fp": s2["re_filename"],
+            }
+        )
+
+    pair_df = pd.DataFrame(rows)
+    return pair_df
+
+
