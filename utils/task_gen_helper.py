@@ -399,6 +399,8 @@ def make_chained_pair(
                                max(r["stim1"], r["stim2"])) in seen_unordered,
                     axis=1
                 )]
+                row_pick = candidates.sample(n=1)
+                idx_pick = row_pick.index[0]
             else:
                 prev_idx = trial_idxs[-1]
                 s_prev2 = int(pair_df.loc[prev_idx, "stim2"])
@@ -409,21 +411,22 @@ def make_chained_pair(
                     axis=1
                 )]
 
-            if len(candidates) == 0:
-                return None  # stuck
+                if len(candidates) == 0:
+                    return None  # stuck
 
-            # Vectorized score computation
-            n_current = len(trials) * n_chains + len(trial_idxs)
-            feat_matrix = candidates[feature_cols].to_numpy()  # shape: (n_candidates, n_features)
-            cur_ratios = np.array([feature_counts[f] / max(1, n_current) for f in feature_cols])
-            new_ratios = (feat_matrix + cur_ratios * n_current) / (n_current + 1)
-            scores = -np.abs(new_ratios - 0.5).sum(axis=1)
+                # Vectorized score computation
+                n_current = len(trials) * n_chains + len(trial_idxs)
+                feat_matrix = candidates[feature_cols].to_numpy()  # shape: (n_candidates, n_features)
+                cur_ratios = np.array([feature_counts[f] / max(1, n_current) for f in feature_cols])
+                new_ratios = (feat_matrix + cur_ratios * n_current) / (n_current + 1)
+                scores = -np.abs(new_ratios - 0.5).sum(axis=1)
 
-            # pick one candidate, weighted by score
-            idx_pick = np.random.choice(
-                candidates.index,
-                p=(scores - scores.min() + 1e-6) / np.sum(scores - scores.min() + 1e-6)
-            )
+                # pick one candidate, weighted by score
+                idx_pick = np.random.choice(
+                    candidates.index,
+                    p=(scores - scores.min() + 1e-6) / np.sum(scores - scores.min() + 1e-6)
+                )
+
             s1 = int(pair_df.loc[idx_pick, "stim1"])
             s2 = int(pair_df.loc[idx_pick, "stim2"])
             seen_unordered.add((min(s1, s2), max(s1, s2)))
