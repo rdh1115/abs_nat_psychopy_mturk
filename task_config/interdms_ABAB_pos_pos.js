@@ -50,12 +50,12 @@ export const TASK_CONFIG = {
      – Compare the 3rd frame with the 1st frame.
      – If their categories are the same, press 'X'.
      – Otherwise, press 'B'.
-     – This is the _B_B in ABAB.
+     – This is the A_A_ in ABAB.
   2) Position match (AA):
      – Compare the 4th frame with the 2nd frame.
      – If their categories are the same, press 'X'.
      – Otherwise, press 'B'.
-     – This is the A_A_ in ABAB.
+     – This is the _B_B in ABAB.
 
 • The categories include Cars, Planes, Boats, Fruits, Faces, Animals, Chairs, and Tables.
 

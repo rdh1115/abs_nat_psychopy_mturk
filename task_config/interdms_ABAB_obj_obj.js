@@ -50,12 +50,12 @@ export const TASK_CONFIG = {
      – Compare the 3rd frame with the 1st frame.
      – If they are the same, press 'X'.
      – Otherwise, press 'B'.
-     – This is the _B_B in ABAB.
+     – This is the A_A_ in ABAB.
   2) Identity match (AA):
      – Compare the 4th frame with the 2nd frame.
      – If they are the same, press 'X'.
      – Otherwise, press 'B'.
-     – This is the A_A_ in ABAB.
+     – This is the _B_B in ABAB.
 
 • Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
