@@ -1,12 +1,12 @@
-// Configuration for the 1-back category task
+// Configuration object for the interdms ABBA pos pos task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: '1back_category',
+    expName: 'interdms_ABBA_pos_pos',
 
     // Which CSV to use for trials
-    // trialsCsv: 'resources/1back_debug.csv',
-    trialsCsv: 'resources/1back_category_trials.csv',
+    // trialsCsv: 'resources/interdms_debug.csv',
+    trialsCsv: 'resources/interdms_ABBA_pos_pos_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -15,12 +15,12 @@ export const TASK_CONFIG = {
 
     // How to extract stim / action fields from each trial row
     // These should match column names in the CSV
-    stimFieldNames: ['stim1', 'stim2', 'stim3', 'stim4', 'stim5', 'stim6'],
-    actFieldNames: [null, 'act2', 'act3', 'act4', 'act5', 'act6'],
+    stimFieldNames: ['stim1', 'stim2', 'stim3', 'stim4'],
+    actFieldNames: [null, null, 'act3', 'act4'],
 
     // Frames with responses (0-based index)
-    numFrames: 6,
-    responseFrames: [1, 2, 3, 4, 5],
+    numFrames: 4,
+    responseFrames: [2, 3],
     responseKeys: ['x', 'b'],
 
     // Timings (in seconds)
@@ -43,13 +43,23 @@ export const TASK_CONFIG = {
     // Texts
     welcomeText: `
 Task instructions:
-• You will complete a 1-back category task.
 
-• Each trial contains 6 images (frames). Starting from the 2nd frame, press:
-    - 'X' if the current image's CATEGORY matches the previous frame,
-    - 'B' if it DOES NOT match.
+• You will perform an Interleaved Delayed Match-to-Sample ABBA Position–Position task.
 
-• Each frame is shown for 500 ms, followed by a 2-second interval.
+• Each trial consists of a sequence of 4 images. You will make two comparisons:
+
+  1) Position match (BB):
+     – Compare the 3rd frame with the 2nd frame.
+     – If they are the same, press 'X' after you see the 3rd frame.
+     – Otherwise, press 'B'.
+     - This is the _BB_ in ABBA.
+
+  2) Position match (AA):
+     – Compare the 4th frame with the 1st frame.
+     – If they are the same, press 'X' after you see the 4th frame.
+     - This is the A__A in ABBA.
+
+• Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
 • There are 5 sessions of 20 trials each. You can take short breaks between sessions.
 
@@ -103,17 +113,24 @@ Press Enter to begin the learning session.`;
     makeFrameInstruction(frameIdx, isLearning) {
         if (!isLearning) return '';
         if (frameIdx === 0) {
-            return 'Remember the CATEGORY of this object.';
-        }
-        if (frameIdx >= 1 && frameIdx <= 5) {
-            return 'Compare with the PREVIOUS image.\nPress X if same category, B if different.';
+            return 'Remember the POSITION of this object.';
+        } else if (frameIdx === 1) {
+            return 'Remember the POSITION of this object.';
+        } else if (frameIdx === 2) {
+            return 'Compare POSITION with the SECOND image.\n' +
+                'Press X if same location, B if different.';
+        } else if (frameIdx === 3) {
+            return 'Compare POSITION with the FIRST image.\n' +
+                'Press X if same object, B if different.';
+        } else {
+            return '';
         }
         return '';
     },
 
     makeDelayText(frameIdx, isLearning) {
         if (!isLearning) return '';
-        if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+        if (frameIdx === 2 || frameIdx === 3) {
             return 'Respond';
         }
         return 'Wait...';

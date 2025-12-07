@@ -1,12 +1,12 @@
-// Configuration for the 1-back category task
+// Configuration for the 1-back obj task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: '1back_category',
+    expName: '1back_obj',
 
     // Which CSV to use for trials
     // trialsCsv: 'resources/1back_debug.csv',
-    trialsCsv: 'resources/1back_category_trials.csv',
+    trialsCsv: 'resources/1back_obj_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -43,10 +43,10 @@ export const TASK_CONFIG = {
     // Texts
     welcomeText: `
 Task instructions:
-• You will complete a 1-back category task.
+• You will complete a 1-back Object task.
 
 • Each trial contains 6 images (frames). Starting from the 2nd frame, press:
-    - 'X' if the current image's CATEGORY matches the previous frame,
+    - 'X' if the current image matches the previous frame,
     - 'B' if it DOES NOT match.
 
 • Each frame is shown for 500 ms, followed by a 2-second interval.
@@ -103,10 +103,10 @@ Press Enter to begin the learning session.`;
     makeFrameInstruction(frameIdx, isLearning) {
         if (!isLearning) return '';
         if (frameIdx === 0) {
-            return 'Remember the CATEGORY of this object.';
+            return 'Remember the IDENTITY of this object.';
         }
         if (frameIdx >= 1 && frameIdx <= 5) {
-            return 'Compare with the PREVIOUS image.\nPress X if same category, B if different.';
+            return 'Compare with the PREVIOUS image.\nPress X if same IDENTITY, B if different.';
         }
         return '';
     },

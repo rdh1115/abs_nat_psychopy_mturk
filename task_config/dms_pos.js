@@ -1,4 +1,4 @@
-// Configuration for the 1-back category task
+// Configuration object for the 1-back category task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----

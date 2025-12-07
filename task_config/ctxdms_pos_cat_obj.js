@@ -1,12 +1,12 @@
-// Configuration for the 1-back category task
+// Configuration object for the ctxdms position category object task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: '1back_category',
+    expName: 'ctxdms_position_category_identity',
 
     // Which CSV to use for trials
-    // trialsCsv: 'resources/1back_debug.csv',
-    trialsCsv: 'resources/1back_category_trials.csv',
+    // trialsCsv: 'resources/interdms_debug.csv',
+    trialsCsv: 'resources/ctxdms_pos_category_obj_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -15,12 +15,12 @@ export const TASK_CONFIG = {
 
     // How to extract stim / action fields from each trial row
     // These should match column names in the CSV
-    stimFieldNames: ['stim1', 'stim2', 'stim3', 'stim4', 'stim5', 'stim6'],
-    actFieldNames: [null, 'act2', 'act3', 'act4', 'act5', 'act6'],
+    stimFieldNames: ['stim1', 'stim2', 'stim3'],
+    actFieldNames: [null, null, 'act3'],
 
     // Frames with responses (0-based index)
-    numFrames: 6,
-    responseFrames: [1, 2, 3, 4, 5],
+    numFrames: 3,
+    responseFrames: [2],
     responseKeys: ['x', 'b'],
 
     // Timings (in seconds)
@@ -43,13 +43,25 @@ export const TASK_CONFIG = {
     // Texts
     welcomeText: `
 Task instructions:
-• You will complete a 1-back category task.
 
-• Each trial contains 6 images (frames). Starting from the 2nd frame, press:
-    - 'X' if the current image's CATEGORY matches the previous frame,
-    - 'B' if it DOES NOT match.
+• You will perform a Contextual Delayed Match-to-Sample task.
 
-• Each frame is shown for 500 ms, followed by a 2-second interval.
+• Each trial consists of a sequence of 3 images. You will make two comparisons, the second comparison depends on the result of the first:
+
+  1) Position match:
+     – Compare the 2nd frame with the 1st frame.
+     – Remember if their position matched.
+
+  2) Category/Object match:
+     – Compare the 3rd frame with the 2nd frame.
+     – If the first comparison a match, then compare their CATEGORY:
+     – Otherwise, compare their IDENTITY:
+     - If they match according to the relevant feature, press 'X'.
+     - Otherwise, press 'B'.
+
+• The categories include Cars, Planes, Boats, Fruits, Faces, Animals, Chairs, and Tables.
+
+• Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
 • There are 5 sessions of 20 trials each. You can take short breaks between sessions.
 
@@ -61,7 +73,7 @@ Press Enter to start.`,
 From now on, the real sessions will begin.
 The task will run at normal speed, without extra
 frame-by-frame instructions or feedback.
-            
+
 Press Enter to continue to the real sessions.`,
 
     thanksText:
@@ -103,17 +115,25 @@ Press Enter to begin the learning session.`;
     makeFrameInstruction(frameIdx, isLearning) {
         if (!isLearning) return '';
         if (frameIdx === 0) {
-            return 'Remember the CATEGORY of this object.';
-        }
-        if (frameIdx >= 1 && frameIdx <= 5) {
-            return 'Compare with the PREVIOUS image.\nPress X if same category, B if different.';
+            return 'Remember the POSITION of this object.';
+        } else if (frameIdx === 1) {
+            return 'Compare POSITION with the FIRST image.\n' +
+                'Remember if they match.\n' +
+                'Also, remember the relevant feature of this object.';
+        } else if (frameIdx === 2) {
+            return 'If the POSITION matched,\n' +
+            'then Compare CATEGORY with the SECOND image.\n' +
+            'Otherwise, Compare IDENTITY with the SECOND image.\n' +
+            'Press X if match, B if different.';
+        } else {
+            return '';
         }
         return '';
     },
 
     makeDelayText(frameIdx, isLearning) {
         if (!isLearning) return '';
-        if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+        if (frameIdx === 2) {
             return 'Respond';
         }
         return 'Wait...';
