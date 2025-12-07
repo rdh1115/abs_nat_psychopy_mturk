@@ -118,7 +118,7 @@ Press Enter to begin the learning session.`;
                 'Remember if they match.\n' +
                 'Also remember the relevant feature.';
         } else if (frameIdx === 2) {
-            return 'If the POSITION matched,\n' +
+            return 'If the position matched,\n' +
             'then compare CATEGORY with the SECOND image.\n' +
             'Otherwise, compare IDENTITY with the SECOND image.\n' +
             'Press X if match, B if different.';
