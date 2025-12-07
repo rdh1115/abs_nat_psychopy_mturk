@@ -51,7 +51,6 @@ export const TASK_CONFIG = {
      – If they are the same, press 'X' after you see the 3rd frame.
      – Otherwise, press 'B'.
      – This is the _BB_ in ABBA.
-
   2) Identity match (AA):
      – Compare the 4th frame with the 1st frame.
      – If they are the same, press 'X' after you see the 4th frame.

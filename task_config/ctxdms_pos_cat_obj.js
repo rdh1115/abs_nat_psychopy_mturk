@@ -49,7 +49,6 @@ export const TASK_CONFIG = {
   1) Position match:
      – Compare the 2nd frame with the 1st frame.
      – Remember if their position matched.
-
   2) Category/Object match:
      – Compare the 3rd frame with the 2nd frame.
      – If the first comparison a match, then compare their CATEGORY:

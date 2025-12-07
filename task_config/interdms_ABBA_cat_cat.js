@@ -42,8 +42,6 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-
 • You will perform an Interleaved Delayed Match-to-Sample ABBA Category–Category task.
 
 • Each trial consists of a sequence of 4 images. You will make two comparisons:
@@ -53,8 +51,6 @@ Task instructions:
      – If their categories are the same, press 'X'.
      – Otherwise, press 'B'.
      - This is the _BB_ in ABBA.
-
-
   2) Category match (AA):
      – Compare the 4th frame with the 1st frame.
      – If their categories are the same, press 'X'.
@@ -66,7 +62,6 @@ Task instructions:
 • Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
 • There are 5 sessions of 20 trials each. You can take short breaks between sessions.
-
 
 Press Enter to start.`,
 

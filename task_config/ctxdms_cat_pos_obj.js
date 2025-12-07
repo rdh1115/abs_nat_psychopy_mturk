@@ -51,7 +51,6 @@ Task instructions:
   1) Category match:
      – Compare the 2nd frame with the 1st frame.
      – Remember if they are from the same category (for example, both planes).
-
   2) Position/Object match:
      – Compare the 3rd frame with the 2nd frame.
      – If first comparison was a match, then compare their POSITION:

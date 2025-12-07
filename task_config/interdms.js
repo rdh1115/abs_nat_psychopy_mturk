@@ -42,17 +42,13 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-
-• You will perform an Inter(-leaved)DMS ABAB Position–Identity task.
-
+• You will perform an Interleaved Delayed Match-to-Sample ABAB Position–Object task.
 • Each trial consists of a sequence of  4 images. You will make two comparisons:
 
   1) Location match (3rd vs 1st frame):
      – Compare the 3rd frame with the 1st frame.
      – If the stimulus appears in the same LOCATION, press 'X' as soon as you see the 3rd frame.
      – Otherwise, press 'B'.
-
   2) Identity match (4th vs 2nd frame):
      – Compare the 4th frame with the 2nd frame.
      – If the object is the same (for example, the same plane), press 'X' as soon as you see the 4th frame.
