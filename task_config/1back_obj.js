@@ -42,7 +42,6 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
 • You will complete a 1-back Object task.
 
 • Each trial contains 6 images (frames). Starting from the 2nd frame, press:
@@ -51,7 +50,7 @@ Task instructions:
 
 • Each frame is shown for 500 ms, followed by a 2-second interval.
 
-• There are 5 sessions of 20 trials each. You can take short breaks between sessions.
+• There are 5 sessions of 4 trials each. You can take short breaks between sessions.
 
 Press Enter to start.`,
 

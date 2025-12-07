@@ -42,8 +42,6 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-
 • You will perform an Interleaved Delayed Match-to-Sample ABAB Category–Category task.
 
 • Each trial consists of a sequence of 4 images. You will make two comparisons:
@@ -52,14 +50,13 @@ Task instructions:
      – Compare the 3rd frame with the 1st frame.
      – If their categories are the same, press 'X'.
      – Otherwise, press 'B'.
-     - This is the _B_B in ABAB.
-
+     – This is the _B_B in ABAB.
 
   2) Category match (AA):
      – Compare the 4th frame with the 2nd frame.
      – If their categories are the same, press 'X'.
      – Otherwise, press 'B'.
-     - This is the A_A_ in ABAB.
+     – This is the A_A_ in ABAB.
 
 • The categories include Cars, Planes, Boats, Fruits, Faces, Animals, Chairs, and Tables.
 

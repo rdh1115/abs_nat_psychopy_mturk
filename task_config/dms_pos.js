@@ -1,12 +1,12 @@
-// Configuration object for the 1-back category task
+// Configuration object for the DMS position task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: '1back_category',
+    expName: 'dms_position',
 
     // Which CSV to use for trials
     // trialsCsv: 'resources/1back_debug.csv',
-    trialsCsv: 'resources/1back_category_trials.csv',
+    trialsCsv: 'resources/dms_pos_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -15,12 +15,12 @@ export const TASK_CONFIG = {
 
     // How to extract stim / action fields from each trial row
     // These should match column names in the CSV
-    stimFieldNames: ['stim1', 'stim2', 'stim3', 'stim4', 'stim5', 'stim6'],
-    actFieldNames: [null, 'act2', 'act3', 'act4', 'act5', 'act6'],
+    stimFieldNames: ['stim1', 'stim2'],
+    actFieldNames: [null, 'act2'],
 
     // Frames with responses (0-based index)
-    numFrames: 6,
-    responseFrames: [1, 2, 3, 4, 5],
+    numFrames: 2,
+    responseFrames: [1],
     responseKeys: ['x', 'b'],
 
     // Timings (in seconds)
@@ -42,11 +42,10 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-• You will complete a 1-back category task.
+• You will complete a Delayed Match-to-Sample task.
 
-• Each trial contains 6 images (frames). Starting from the 2nd frame, press:
-    - 'X' if the current image's CATEGORY matches the previous frame,
+• Each trial contains 2 images (frames). On the 2nd frame, press:
+    - 'X' if the position of the current image matches the previous one,
     - 'B' if it DOES NOT match.
 
 • Each frame is shown for 500 ms, followed by a 2-second interval.
@@ -103,17 +102,17 @@ Press Enter to begin the learning session.`;
     makeFrameInstruction(frameIdx, isLearning) {
         if (!isLearning) return '';
         if (frameIdx === 0) {
-            return 'Remember the CATEGORY of this object.';
+            return 'Remember the POSITION of this object.';
         }
-        if (frameIdx >= 1 && frameIdx <= 5) {
-            return 'Compare with the PREVIOUS image.\nPress X if same category, B if different.';
+        if (frameIdx === 1) {
+            return 'Compare with the previous image.\nPress X if same POSITION, B if different.';
         }
         return '';
     },
 
     makeDelayText(frameIdx, isLearning) {
         if (!isLearning) return '';
-        if (frameIdx === 1 || frameIdx === 2 || frameIdx === 3 || frameIdx === 4 || frameIdx === 5) {
+        if (frameIdx === 1) {
             return 'Respond';
         }
         return 'Wait...';

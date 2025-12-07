@@ -42,8 +42,6 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-
 • You will perform a Contextual Delayed Match-to-Sample task.
 
 • Each trial consists of a sequence of 3 images. You will make two comparisons, the second comparison depends on the result of the first:
@@ -56,8 +54,8 @@ Task instructions:
      – Compare the 3rd frame with the 2nd frame.
      – If the first comparison a match, then compare their CATEGORY:
      – Otherwise, compare their IDENTITY:
-     - If they match according to the relevant feature, press 'X'.
-     - Otherwise, press 'B'.
+     – If they match according to the relevant feature, press 'X'.
+     – Otherwise, press 'B'.
 
 • The categories include Cars, Planes, Boats, Fruits, Faces, Animals, Chairs, and Tables.
 
@@ -119,11 +117,11 @@ Press Enter to begin the learning session.`;
         } else if (frameIdx === 1) {
             return 'Compare POSITION with the FIRST image.\n' +
                 'Remember if they match.\n' +
-                'Also, remember the relevant feature of this object.';
+                'Also remember the relevant feature.';
         } else if (frameIdx === 2) {
             return 'If the POSITION matched,\n' +
-            'then Compare CATEGORY with the SECOND image.\n' +
-            'Otherwise, Compare IDENTITY with the SECOND image.\n' +
+            'then compare CATEGORY with the SECOND image.\n' +
+            'Otherwise, compare IDENTITY with the SECOND image.\n' +
             'Press X if match, B if different.';
         } else {
             return '';

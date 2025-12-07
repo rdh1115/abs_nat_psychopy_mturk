@@ -42,8 +42,6 @@ export const TASK_CONFIG = {
 
     // Texts
     welcomeText: `
-Task instructions:
-
 • You will perform an Interleaved Delayed Match-to-Sample ABBA Position–Position task.
 
 • Each trial consists of a sequence of 4 images. You will make two comparisons:
@@ -52,12 +50,12 @@ Task instructions:
      – Compare the 3rd frame with the 2nd frame.
      – If they are the same, press 'X' after you see the 3rd frame.
      – Otherwise, press 'B'.
-     - This is the _BB_ in ABBA.
+     – This is the _BB_ in ABBA.
 
   2) Position match (AA):
      – Compare the 4th frame with the 1st frame.
      – If they are the same, press 'X' after you see the 4th frame.
-     - This is the A__A in ABBA.
+     – This is the A__A in ABBA.
 
 • Each image is shown for 500 ms, followed by a 2-second response window in which you can press 'X' or 'B'.
 
