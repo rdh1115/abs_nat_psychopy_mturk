@@ -1,12 +1,12 @@
-// Configuration object for the ctxdms category position identity task
+// Configuration object for the ctxdms category identity position task
 
 export const TASK_CONFIG = {
     // ----- Basic experiment metadata -----
-    expName: 'ctxdms_category_position_identity',
+    expName: 'ctxdms_category_identity_position',
 
     // Which CSV to use for trials
     // trialsCsv: 'resources/interdms_debug.csv',
-    trialsCsv: 'resources/ctxdms_category_pos_obj_trials.csv',
+    trialsCsv: 'resources/ctxdms_category_obj_pos_trials.csv',
 
     // Always-preload fallback images (and any other always-needed assets)
     alwaysResources: [
@@ -51,10 +51,10 @@ Task instructions:
   1) Category match:
      – Compare the 2nd frame with the 1st frame.
      – Remember if they are from the same category (for example, both planes).
-  2) Position/Object match:
+  2) Identity/Position match:
      – Compare the 3rd frame with the 2nd frame.
-     – If first comparison was a match, then compare their POSITION:
-     – Otherwise, compare their IDENTITY:
+     – If first comparison was a match, then compare their IDENTITY:
+     – Otherwise, compare their POSITION:
      – If they match according to the relevant feature, press 'X'.
      – Otherwise, press 'B'.
 
@@ -119,9 +119,8 @@ Press Enter to begin the learning session.`;
             return 'Compare CATEGORY with the FIRST image.\n' +
                 'Also remember the relevant feature.';
         } else if (frameIdx === 2) {
-            return 'If the category matched,\n' +
-            'then compare POSITION with the SECOND image.\n' +
-            'Otherwise, compare IDENTITY with the SECOND image.\n' +
+            return 'If the category matched, compare IDENTITY with the SECOND image.\n' +
+            'Otherwise, compare POSITION with the SECOND image.\n' +
             'Press X if match, B if different.';
         } else {
             return '';
