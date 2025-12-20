@@ -30,8 +30,8 @@ export const TASK_CONFIG = {
             total: 1.5 + 2.0
         },
         main: {
-            image: 0.5,
-            total: 0.5 + 2.0
+            image: 0.8,
+            total: 0.8 + 2.0
         },
         feedbackDuration: 1.0,
         itiDuration: 5.0
